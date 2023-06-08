@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="245c9a6d-4daa-49c1-b66b-de502d1c784d" name="student1.cp.jku.at">
+        <fileTransfer rootFolder="/home/christianwi" accessType="SFTP" host="student1.cp.jku.at" port="22" sshConfigId="a7741a9b-e7c2-4b36-bb9e-fcd36f3cd3c4" sshConfig="christianwi@student1.cp.jku.at:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
