@@ -56,7 +56,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         self.model = get_model(in_channels=config.in_channels,
                                n_classes=config.n_classes,
                                base_channels=config.base_channels,
-                               channels_multiplier=config.channels_multiplier
+                               channels_multiplier=config.channels_multiplier,
+                               channel_width=config.channel_width
                                )
 
 
@@ -77,8 +78,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         :param x: batch of raw audio signals (waveforms)
         :return: final model predictions
         """
-        if self.config.mnist is False:
-            x = self.mel_forward(x)
+        #if self.config.mnist is False:
+        x = self.mel_forward(x)
         x = self.model(x)
         return x
 
@@ -107,13 +108,13 @@ class SimpleDCASELitModule(pl.LightningModule):
         """
         x, y = train_batch  # we get a batch of raw audio signals and labels as defined by our dataset
         bs = x.size(0)
-        if self.config.mnist is False:
-            x = self.mel_forward(x)  # we convert the raw audio signals into log mel spectrograms
-            # apply mixstyle to spectorgrams
-            if self.mixstyle_p > 0:
-                x = mixstyle(x, self.mixstyle_p, self.mixstyle_alpha)
+        #if self.config.mnist is False:
+        x = self.mel_forward(x)  # we convert the raw audio signals into log mel spectrograms
+        # apply mixstyle to spectorgrams
+        if self.mixstyle_p > 0:
+            x = mixstyle(x, self.mixstyle_p, self.mixstyle_alpha)
 
-        if args.mixup_alpha and self.config.mnist is False:
+        if args.mixup_alpha: # and self.config.mnist is False:
             # Apply Mixup, a very common data augmentation method
             rn_indices, lam = mixup(bs, args.mixup_alpha)  # get shuffled indices and mixing coefficients
             # send mixing coefficients to correct device and make them 4-dimensional
@@ -134,7 +135,9 @@ class SimpleDCASELitModule(pl.LightningModule):
             # be careful when choosing the correct loss functions
             # read the documentation what input your loss function expects, e.g. for F.cross_entropy:
             # the logits (no softmax!) and the prediction targets (class indices)
+
             samples_loss = F.cross_entropy(y_hat, y, reduction="none")
+            #print("samples_loss: ", samples_loss)
 
         label_loss = samples_loss.mean()
         results = {"loss": label_loss}
@@ -164,8 +167,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         # similar to 'training_step' but without any data augmentation
         # pytorch lightening takes care of 'with torch.no_grad()' and 'model.eval()'
         x, y = val_batch
-        if self.config.mnist is False:
-            x = self.mel_forward(x)
+        #if self.config.mnist is False:
+        x = self.mel_forward(x)
         y_hat = self.model(x)
         loss = F.cross_entropy(y_hat, y)
         return {'val_loss': loss}
@@ -175,8 +178,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         if avg_loss < self.best_loss:
             self.best_loss = avg_loss
-            torch.save(self.model.state_dict(), 'trained_models/best_model_statedict_cnn.pth')
-            torch.save(self.model, 'trained_models/best_model_cnn.pth')
+            torch.save(self.model.state_dict(), 'trained_models/' + self.config.experiment_name + '_statedict.pth')
+            torch.save(self.model, 'trained_models/' + self.config.experiment_name + '.pth')
         self.log_dict({'val_loss': avg_loss})
 
     def test_step(self, test_batch, batch_idx):
@@ -190,7 +193,7 @@ class SimpleDCASELitModule(pl.LightningModule):
 
     def test_epoch_end(self, outputs):
         # MNIST dataset
-        if self.config.mnist:
+        if self.config.mnist is True:
             c_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         else:
         # ASC dataset
@@ -248,10 +251,12 @@ def train(config):
         train=False,
         transform=ToTensor()
     )
+
     trainset = get_training_set(config.cache_path, config.resample_rate, config.roll, config.data_dir)
     valset = get_val_set(config.cache_path, config.resample_rate, config.data_dir)
     testset = get_test_set(config.cache_path, config.resample_rate, config.data_dir)
-    if config.mnist:
+
+    if config.mnist is True:
         trainset = train_subset
         valset = val_subset
         testset = test_data
@@ -326,6 +331,7 @@ if __name__ == '__main__':
     # adapt the complexity of the neural network
     parser.add_argument('--base_channels', type=int, default=16)
     parser.add_argument('--channels_multiplier', type=int, default=2)
+    parser.add_argument('--channel_width', type=str, default='24 48 72')
 
     # training
     parser.add_argument('--batch_size', type=int, default=32)
@@ -358,17 +364,9 @@ if __name__ == '__main__':
     parser.add_argument('--fmin_aug_range', type=int, default=1)  # data augmentation: vary 'fmin' and 'fmax'
     parser.add_argument('--fmax_aug_range', type=int, default=1000)
     parser.add_argument('--data_dir', type=str, default="../malach23/malach/datasets/dataset")
-    parser.add_argument('--mnist', type=bool, default=False)
+    parser.add_argument('--mnist', default=False)
 
     args = parser.parse_args()
-    # Start Energy Tracking
-    # tracker = EmissionsTracker()
-    # tracker.start()
-    # Start Training
-    train(args)
-    # End Energy Tracking
-    # tracker.stop()
 
-    # Store total energy
-    # used_kwh = tracker._total_energy.kWh
-    # print('Used kwh for validation: ', used_kwh)
+    train(args)
+

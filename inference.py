@@ -1,7 +1,6 @@
 import argparse
 import torch
 from ex_dcase import SimpleDCASELitModule
-from codecarbon import EmissionsTracker
 import nessi
 from models.mel import AugmentMelSTFT
 from helpers.utils import print_size_of_model
@@ -16,14 +15,18 @@ import torch
 from torch.utils.data import DataLoader
 import argparse
 import torch.nn.functional as F
-#from codecarbon import EmissionsTracker
 from torchmetrics import Accuracy
-import torch.nn.utils.prune as prune
 from datasets.evaldataset import get_evaluation_set
 from helpers.init import worker_init_fn
 import pandas as pd
 import os
 import librosa as liro
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+from datasets.audiodataset import get_test_set, get_val_set, get_training_set
+from helpers.lr_schedule import exp_warmup_linear_down
+
+mnist = False
 
 def create_dataset_config(dataset_path):
     """
@@ -45,7 +48,8 @@ def create_dataset_config(dataset_path):
     }
     return dataset_config
 
-def audio_tagging(config):
+
+def do_inference(config):
     """
     Running Inference on an audio clip.
     """
@@ -64,79 +68,403 @@ def audio_tagging(config):
     pl_module.model.eval()
     pl_module.model.to(device)
 
-    # model to preprocess waveform into mel spectrograms
-    mel = AugmentMelSTFT(n_mels=config.n_mels, sr=config.resample_rate, win_length=config.window_size, hopsize=config.hop_size, n_fft=config.n_fft)
-    mel.to(device)
-    mel.eval()
+    print("Model parameters:")
+    print(sum(p.numel() for p in pl_module.model.parameters()))
 
-    # waveform
-    dataset_config = create_dataset_config(config.data_dir)
-    test_files = pd.read_csv(dataset_config['evaluation_files_csv'], sep='\t')['filename'].values.reshape(-1)
-    directory = os.getcwd()
-    filepath = os.path.join(config.data_dir, test_files[2])
-    waveform, _ = liro.load(filepath, sr=config.resample_rate)
-    waveform = torch.from_numpy(waveform).to(device)
-    waveform = waveform[None, :]
-    #print(waveform.shape)
-    #waveform = torch.zeros((1, config.resample_rate * 1)).to(device)  # 1 seconds waveform
-    print(waveform.shape)
-    spectrogram = mel(waveform).to(device)
-    # squeeze in channel dimension
-    spectrogram = spectrogram.unsqueeze(1)
+    # MNIST dataset
+    train_data = datasets.MNIST(
+        root='data',
+        train=True,
+        transform=ToTensor(),
+        download=True,
+    )
 
-    # Initialize tracker
-    tracker = EmissionsTracker()
-    # Start tracker
-    tracker.start()
-    y_hat = pl_module.model.forward(spectrogram)
-    print(torch.max(y_hat, dim=1))
-    # Stop tracker
-    tracker.stop()
-    # Store total energy
-    used_kwh = tracker._total_energy.kWh
-    print('Used kwh for inference: ', used_kwh)
+    train_subset, val_subset = torch.utils.data.random_split(
+        train_data, [50000, 10000], generator=torch.Generator().manual_seed(1))
 
-    #test_dl = DataLoader(dataset=get_evaluation_set(config.cache_path, config.resample_rate, config.data_dir),
-    #                     worker_init_fn=worker_init_fn,
-    #                     num_workers=config.num_workers,
-    #                     batch_size=config.batch_size)
+    test_data = datasets.MNIST(
+        root='data',
+        train=False,
+        transform=ToTensor()
+    )
 
-    #trainer = pl.Trainer(accelerator='gpu', devices=1).test(pl_module, dataloaders=test_dl)
+    if mnist:
+        trainset = train_subset
+        valset = val_subset
+        testset = test_data
+    else:
+        trainset = get_training_set(config.cache_path, config.resample_rate, config.roll, "../malach23/malach/datasets/dataset")
+        valset = get_val_set(config.cache_path, config.resample_rate, "../malach23/malach/datasets/dataset")
+        testset = get_test_set(config.cache_path, config.resample_rate, "../malach23/malach/datasets/dataset")
 
+    from torch.utils.data import DataLoader
 
+    # train dataloader
+    train_dl = DataLoader(dataset=trainset,
+                          worker_init_fn=worker_init_fn,
+                          num_workers=config.num_workers,
+                          batch_size=config.batch_size,
+                          shuffle=True)
 
-    #nessi.get_model_size(pl_module.model, 'torch', input_size=spectrogram.size())
-    #print(sum(p.numel() for p in pl_module.model.parameters()))
+    # validation loader
+    val_dl = DataLoader(dataset=valset,
+                        worker_init_fn=worker_init_fn,
+                        num_workers=config.num_workers,
+                        batch_size=config.batch_size)
 
-    #print("Are the modules pruned:")
-    #for name, module in pl_module.model.named_modules():
-    #    print(name, torch.nn.utils.prune.is_pruned(module))
+    # test loader
+    test_dl = DataLoader(dataset=testset,
+                         worker_init_fn=worker_init_fn,
+                         num_workers=config.num_workers,
+                         batch_size=config.batch_size)
+
+    if mnist is False:
+        # model to preprocess waveform into mel spectrograms
+        mel = AugmentMelSTFT(n_mels=config.n_mels, sr=config.resample_rate, win_length=config.window_size, hopsize=config.hop_size, n_fft=config.n_fft)
+        mel.to(device)
+        mel.eval()
+
+        # waveform
+        dataset_config = create_dataset_config(config.data_dir)
+        test_files = pd.read_csv(dataset_config['evaluation_files_csv'], sep='\t')['filename'].values.reshape(-1)
+        directory = os.getcwd()
+        filepath = os.path.join(config.data_dir, test_files[2])
+
+        waveform, _ = liro.load(filepath, sr=config.resample_rate)
+        waveform = torch.from_numpy(waveform).to(device)
+        waveform = waveform[None, :]
+        print(waveform.shape)
+        waveform = torch.zeros((1, config.resample_rate * 1)).to(device)  # 1 seconds waveform
+        print(waveform.shape)
+        spectrogram = mel(waveform).to(device)
+        # squeeze in channel dimension
+        spectrogram = spectrogram.unsqueeze(1)
+        print(spectrogram.shape)
+        y_hat = pl_module.model.forward(spectrogram)
+        print(torch.max(y_hat, dim=1))
+        #nessi.get_model_size(pl_module.model, 'torch', input_size=spectrogram.size())
+
+        with torch.no_grad():
+            correct = 0
+            total = 0
+            for images, labels in test_dl:
+                #images = images[None, :]
+                images = images.to(device)
+                print(images.shape)
+                test_output = pl_module.model.forward(images)
+                pred_y = torch.max(test_output, 1)[1].data.squeeze()
+                accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
+                pass
+
+        print('Test Accuracy of the model on the asc test images: %.2f' % accuracy)
+
+        sample = next(iter(test_dl))
+        imgs, lbls = sample
+        imgs, lbls = imgs.to(device), lbls.to(device)
+        actual_number = lbls[:10].cpu().numpy()
+        test_output = pl_module.model(imgs[:10])
+        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
+        print(f'Prediction classes: {pred_y}')
+        print(f'Actual classes: {actual_number}')
+
+    else:
+        test_data = datasets.MNIST(
+            root='data',
+            train=False,
+            transform=ToTensor()
+        )
+        # test loader
+        test_dl = DataLoader(dataset=test_data,
+                             worker_init_fn=worker_init_fn,
+                             num_workers=config.num_workers,
+                             batch_size=config.batch_size)
+        with torch.no_grad():
+            correct = 0
+            total = 0
+            for images, labels in test_dl:
+                print(images.shape)
+                test_output = pl_module.model(images.to(device))
+                pred_y = torch.max(test_output, 1)[1].data.squeeze()
+                accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
+                pass
+
+        print('Test Accuracy of the model on the 10000 test images: %.2f' % accuracy)
+
+        sample = next(iter(test_dl))
+        imgs, lbls = sample
+        imgs, lbls = imgs.to(device), lbls.to(device)
+        actual_number = lbls[:10].cpu().numpy()
+        test_output = pl_module.model(imgs[:10])
+        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
+        print(f'Prediction number: {pred_y}')
+        print(f'Actual number: {actual_number}')
+
     if config.prune:
+        print("==============================================================================")
         print("Prune model")
         # save unpruned model
-        torch.save(pl_module.model, "unpruned.pth")
-
-        #print('Used kwh for inference (input is 1s spectrogram): ', used_kwh)
-
-        #print_size_of_model(pl_module.model)
+        torch.save(pl_module.model, "trained_models/unpruned.pth")
 
         print("Unpruned size:")
-        #print_size_of_model(pl_module.model)
+        print("Model parameters:")
+        print(sum(p.numel() for p in pl_module.model.parameters()))
+        print_size_of_model(pl_module.model)
+
+        if mnist is True:
+            example_input = imgs[0]
+            example_input = example_input[None, :]
+        else:
+            sample = next(iter(test_dl))
+            imgs, lbls = sample
+            imgs, lbls = imgs.to(device), lbls.to(device)
+            example_input = imgs[0]
+
+        prune_highlevel(device, config, pl_module.model, example_input, imgs, lbls, train_dl, val_dl, test_dl)
 
 
-        prune_simple(config, device, spectrogram, test_dl)
+def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl):
+    num_epochs = 10
+
+    # 0. importance criterion for parameter selections
+    imp = tp.importance.MagnitudeImportance(p=2, group_reduction='mean')
+
+    # 1. ignore some layers that should not be pruned, e.g., the final classifier layer.
+    ignored_layers = []
+    for m in model.modules():
+        if isinstance(m, torch.nn.Conv2d) and m.out_channels == 10:
+            ignored_layers.append(m)  # DO NOT prune the final classifier!
+
+    # 2. Pruner initialization
+    iterative_steps = 5  # You can prune your model to the target sparsity iteratively.
+    pruner = tp.pruner.MagnitudePruner(
+        model,
+        example_inputs,
+        global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
+        importance=imp,  # importance criterion for parameter selection
+        iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
+        ch_sparsity=0.2,  # remove 20% channels
+        ignored_layers=ignored_layers,
+    )
+
+    base_macs, base_nparams = tp.utils.count_ops_and_params(model, example_inputs)
+    for i in range(iterative_steps):
+        # 3. the pruner.step will remove some channels from the model with least importance
+        pruner.step()
+
+        # 4. Do whatever you like here, such as finetuning
+        macs, nparams = tp.utils.count_ops_and_params(model, example_inputs)
+        #print(model)
+        print(model(example_inputs).shape)
+        print(
+            "  Iter %d/%d, Params: %.2f M => %.2f M"
+            % (i + 1, iterative_steps, base_nparams / 1e6, nparams / 1e6)
+        )
+        print(
+            "  Iter %d/%d, MACs: %.2f G => %.2f G"
+            % (i + 1, iterative_steps, base_macs / 1e9, macs / 1e9)
+        )
+        # finetune your model here
+        # finetune(model)
+        # ...
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+        schedule_lambda = \
+            exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
+                                   config.last_lr_value)
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
+        # Train the model
+        total_step = len(train_dl)
+
+        for epoch in range(num_epochs):
+            for i, (images, labels) in enumerate(train_dl):
+                images = images.to(device)
+                labels = labels.to(device)
+                output = model(images)
+                #print(labels.shape)
+                #print(output.shape)
+                loss = F.cross_entropy(output, labels, reduction="none")
+                #print(loss)
+                # clear gradients for this training step
+                optimizer.zero_grad()
+                # backpropagation, compute gradients
+                loss.mean().backward()
+                # apply gradients
+                optimizer.step()
+                if (i + 1) % 100 == 0:
+                    print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
+                                                                             loss.mean()))
+
+    print("Pruned model parameters:")
+    print(sum(p.numel() for p in model.parameters()))
+
+    if mnist is True:
+        actual_number = lbls[:10].cpu().numpy()
+        test_output = model(imgs[:10])
+        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
+        print(f'Prediction number: {pred_y}')
+        print(f'Actual number: {actual_number}')
+
+        with torch.no_grad():
+            correct = 0
+            total = 0
+            for images, labels in test_dl:
+                test_output = model(images.to(device))
+                pred_y = torch.max(test_output, 1)[1].data.squeeze()
+                accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
+                pass
+
+        print('Test Accuracy of the pruned model on the 10000 test images: %.2f' % accuracy)
+    else:
+        sample = next(iter(test_dl))
+        imgs, lbls = sample
+        imgs, lbls = imgs.to(device), lbls.to(device)
 
 
-        #prune_advanced(config, device, spectrogram)
+        actual_number = lbls[:10].cpu().numpy()
+        test_output = model(imgs[:10])
+        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
+        print(f'Prediction number: {pred_y}')
+        print(f'Actual number: {actual_number}')
 
 
-def prune_advanced(config, device, spectrogram):
+    torch.save(model, 'trained_models/pruned.pth')
+
+
+def finetune(device, config, model, train_dl, num_epochs):
+
+    model.train()
+    import torch.nn.functional as F
+    from helpers.lr_schedule import exp_warmup_linear_down
+    import torch.nn as nn
+    from torch import optim
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+    schedule_lambda = \
+        exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
+                               config.last_lr_value)
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
+    # Train the model
+    total_step = len(train_dl)
+
+    for epoch in range(num_epochs):
+        for i, (images, labels) in enumerate(train_dl):
+            # gives batch data, normalize x when iterate train_loader
+            #b_x = Variable(images)  # batch x
+            #b_y = Variable(labels)  # batch y
+
+            labels = labels.to(device)
+            #b_x = b_x.to(device)
+            #b_y = b_y.to(device)
+            #print(images.shape)
+            #print(b_x.shape)
+            #print(b_y.shape)
+            #print(labels.shape)
+            output = model(images.to(device))
+            #output = model(b_x)
+            #print(output[:,0])
+
+            #preds = torch.max(output, 1)[1].data.cpu().numpy().squeeze()
+            #preds = torch.tensor(preds).float()
+            #preds = torch.tensor(preds, requires_grad=True).to(device)
+            print("y_hat: ", output.shape)
+            print("y: ", labels.shape)
+            #loss_fn = nn.CrossEntropyLoss()
+            #loss = loss_fn(preds.float(), labels.float())
+            loss = F.cross_entropy(output, labels, reduction="none")
+
+            # clear gradients for this training step
+            optimizer.zero_grad()
+
+            # backpropagation, compute gradients
+            loss.backward()
+            # apply gradients
+            optimizer.step()
+
+            if (i + 1) % 100 == 0:
+                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+
+    return model
+
+def retrain(config, model):
+    # logging is done using wandb
+    wandb_logger = WandbLogger(
+        project="PracticalWork",
+        notes="Pipeline for Practical Work",
+        tags=["PracticalWork"],
+        config=config,  # this logs all hyperparameters for us
+        name=config.experiment_name,
+        log_model="all"
+    )
+
+    checkpoint_callback = ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1, dirpath="trained_models",
+                                          filename=config.experiment_name + '_{epoch}-{val_loss:.2f}')
+
+
+    # MNIST dataset
+    train_data = datasets.MNIST(
+        root='data',
+        train=True,
+        transform=ToTensor(),
+        download=True,
+    )
+
+    train_subset, val_subset = torch.utils.data.random_split(
+        train_data, [50000, 10000], generator=torch.Generator().manual_seed(1))
+
+    test_data = datasets.MNIST(
+        root='data',
+        train=False,
+        transform=ToTensor()
+    )
+    if mnist is True:
+        trainset = train_subset
+        valset = val_subset
+        testset = test_data
+    else:
+        trainset = get_training_set(config.cache_path, config.resample_rate, config.roll, config.data_dir)
+        valset = get_val_set(config.cache_path, config.resample_rate, config.data_dir)
+        testset = get_test_set(config.cache_path, config.resample_rate, config.data_dir)
+
+
+    # train dataloader
+    train_dl = DataLoader(dataset=trainset,
+                          worker_init_fn=worker_init_fn,
+                          num_workers=config.num_workers,
+                          batch_size=config.batch_size,
+                          shuffle=True)
+
+    # validation loader
+    val_dl = DataLoader(dataset=valset,
+                        worker_init_fn=worker_init_fn,
+                        num_workers=config.num_workers,
+                        batch_size=config.batch_size)
+
+    # test loader
+    test_dl = DataLoader(dataset=testset,
+                         worker_init_fn=worker_init_fn,
+                         num_workers=config.num_workers,
+                         batch_size=config.batch_size)
+
+    # create monitor to keep track of learning rate - we want to check the behaviour of our learning rate schedule
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
+    # create the pytorch lightening trainer by specifying the number of epochs to train, the logger,
+    # on which kind of device(s) to train and possible callbacks
+    trainer = pl.Trainer(max_epochs=config.n_epochs,
+                         logger=wandb_logger,
+                         accelerator='gpu',
+                         devices=1,
+                         callbacks=[lr_monitor, checkpoint_callback],
+                         default_root_dir="checkpoints/")
+
+    # start training and validation
+    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
+
+    trainer.test(model, ckpt_path="best", dataloaders=test_dl)
+def prune_advanced(config, device, input):
     # model is loaded, start pruning
 
     # load model
     pl_module_prune = SimpleDCASELitModule(config)
 
-    pl_module_prune.model.load_state_dict(torch.load('unpruned.pth'), strict=False)
+    pl_module_prune.model = torch.load('trained_models/unpruned.pth')
 
     # disable randomness, dropout, etc...
     pl_module_prune.model.eval()
@@ -144,10 +472,10 @@ def prune_advanced(config, device, spectrogram):
 
     print("tp.DependencyGraph().build_dependency")
     # 1. build dependency graph for resnet18
-    DG = tp.DependencyGraph().build_dependency(pl_module_prune.model, example_inputs=spectrogram)
+    DG = tp.DependencyGraph().build_dependency(pl_module_prune.model, example_inputs=input)
 
     # 2. Specify the to-be-pruned channels. Here we prune those channels indexed by [2, 6, 9].
-    group = DG.get_pruning_group(pl_module_prune.model.conv1, tp.prune_conv_out_channels, idxs=[2, 6, 9])
+    group = DG.get_pruning_group(pl_module_prune.model.in_c, tp.prune_conv_in_channels, idxs=[2, 6, 9])
 
     # 3. prune all grouped layers that are coupled with model.conv1 (included).
     if DG.check_pruning_group(group):  # avoid full pruning, i.e., channels=0.
@@ -155,43 +483,12 @@ def prune_advanced(config, device, spectrogram):
 
     # 4. Save & Load
     pl_module_prune.model.zero_grad()  # We don't want to store gradient information
-    torch.save(pl_module_prune.model, 'pruned.pth')  # without .state_dict
-    model = torch.load('pruned.pth')  # load the model object
+    torch.save(pl_module_prune.model, 'trained_models/pruned.pth')  # without .state_dict
+    model = torch.load('trained_models/pruned.pth')  # load the model object
 
-    nessi.get_model_size(model, 'torch', input_size=spectrogram.size())
-
-
-def prune_simple(config, device, spectrogram, test_dl):
-
-    # load model
-    pl_module_prune = SimpleDCASELitModule(config)
-
-    pl_module_prune.model.load_state_dict(torch.load('unpruned.pth'), strict=False)
-
-    # disable randomness, dropout, etc...
-    pl_module_prune.model.eval()
-    pl_module_prune.model.to(device)
-
-    for name, module in pl_module_prune.model.named_modules():
-        # prune 20% of connections in all 2D-conv layers
-        if isinstance(module, torch.nn.Conv2d):
-            prune.ln_structured(module, name='weight', amount=0.4, n=1, dim=0)
-            #prune.remove(module, "weight")
-        # prune 40% of connections in all linear layers
-        elif isinstance(module, torch.nn.Linear):
-            prune.ln_structured(module, name='weight', amount=0.2, n=1, dim=0)
-            #prune.remove(module, "weight")
-
-    # Model Complexity Report
-    nessi.get_model_size(pl_module_prune.model, 'torch', input_size=spectrogram.size())
-
-    torch.save(pl_module_prune.model, 'pruned_simple.pth')
-    #torch.save(pl_module_prune.model.state_dict(), 'pruned_simple.pth')
-
-    print("Pruned size:")
-    print_size_of_model(pl_module_prune.model)
+    print("Pruned model parameters:")
     print(sum(p.numel() for p in pl_module_prune.model.parameters()))
-    trainer = pl.Trainer(accelerator='gpu', devices=1).test(pl_module_prune, dataloaders=test_dl)
+    #nessi.get_model_size(model, 'torch', input_size=spectrogram.size())
 
 if __name__ == '__main__':
     # simplest form of specifying hyperparameters using argparse
@@ -204,11 +501,12 @@ if __name__ == '__main__':
     parser.add_argument('--architecture', type=str, default="mobilenet")
     parser.add_argument('--modelpath', type=str, default="trained_models")
     parser.add_argument('--cuda', type=int, default=1)
+    parser.add_argument('--channel_width', type=str, default='24, 48, 72')
 
     # dataset
     # location to store resample waveform
     parser.add_argument('--cache_path', type=str, default="datasets/example_data/cached")
-    parser.add_argument('--data_dir', type=str, default="datasets/evaluation_dataset") # location of the dataset
+    parser.add_argument('--data_dir', type=str, default="../malach23/malach/datasets/evaluation_dataset") # location of the dataset
     parser.add_argument('--roll', default=False, action='store_true')  # rolling waveform over time
 
     # model
@@ -220,6 +518,7 @@ if __name__ == '__main__':
     parser.add_argument('--channels_multiplier', type=int, default=2)
 
     # training
+    parser.add_argument('--n_epochs', type=int, default=30)
     parser.add_argument('--pretrained_name', type=str, default=None)
     parser.add_argument('--model_width', type=float, default=1.0)
     parser.add_argument('--head_type', type=str, default="mlp")
@@ -258,10 +557,10 @@ if __name__ == '__main__':
     parser.add_argument('--fmin_aug_range', type=int, default=1)  # data augmentation: vary 'fmin' and 'fmax'
     parser.add_argument('--fmax_aug_range', type=int, default=1000)
 
-    parser.add_argument('--prune', type=bool, default=False)
+    parser.add_argument('--prune', default=False)
 
     args = parser.parse_args()
 
     # get class of audio-clip
-    audio_tagging(args)
+    do_inference(args)
 
