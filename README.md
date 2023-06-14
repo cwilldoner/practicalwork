@@ -27,3 +27,5 @@ This model has 59k params
 2.) Train bigger model (and rename experiment_name):
 
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
+
+This model 131k params
