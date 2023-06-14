@@ -56,13 +56,13 @@ def do_inference(config):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     # load model
-    pl_module = SimpleDCASELitModule(config)
-
+    #pl_module = SimpleDCASELitModule(config)
+    pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path="trained_models/cpresnet_big_asc_epoch=30-val_loss=1.36.ckpt")
     #mymodel = torch.load(modelpath)
     #pl_module.model.load_state_dict(torch.load(modelpath), strict=False)
     #print(pl_module.model.state_dict())
 
-    pl_module.model = torch.load(config.modelpath)
+    #pl_module.model = torch.load(config.modelpath)
 
     # disable randomness, dropout, etc...
     pl_module.model.eval()
@@ -133,39 +133,69 @@ def do_inference(config):
         waveform, _ = liro.load(filepath, sr=config.resample_rate)
         waveform = torch.from_numpy(waveform).to(device)
         waveform = waveform[None, :]
-        print(waveform.shape)
+        #print(waveform.shape)
         waveform = torch.zeros((1, config.resample_rate * 1)).to(device)  # 1 seconds waveform
-        print(waveform.shape)
+        #print(waveform.shape)
         spectrogram = mel(waveform).to(device)
         # squeeze in channel dimension
         spectrogram = spectrogram.unsqueeze(1)
-        print(spectrogram.shape)
+        #print(spectrogram.shape)
         y_hat = pl_module.model.forward(spectrogram)
-        print(torch.max(y_hat, dim=1))
+        #print(torch.max(y_hat, dim=1))
         #nessi.get_model_size(pl_module.model, 'torch', input_size=spectrogram.size())
 
-        with torch.no_grad():
-            correct = 0
-            total = 0
-            for images, labels in test_dl:
+        #with torch.no_grad():
+        #    correct = 0
+        #    total = 0
+        #    for images, labels in test_dl:
                 #images = images[None, :]
-                images = images.to(device)
-                print(images.shape)
-                test_output = pl_module.model.forward(images)
-                pred_y = torch.max(test_output, 1)[1].data.squeeze()
-                accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
-                pass
+        #        images = images.to(device)
+        #        print(images.shape)
+        #        test_output = pl_module.model.forward(images)
+        #        pred_y = torch.max(test_output, 1)[1].data.squeeze()
+        #        accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
+        #        pass
+        # logging is done using wandb
+        wandb_logger = WandbLogger(
+            project="PracticalWork",
+            notes="Pipeline for Practical Work",
+            tags=["PracticalWork"],
+            config=config,  # this logs all hyperparameters for us
+            name=config.experiment_name,
+            log_model="all"
+        )
 
-        print('Test Accuracy of the model on the asc test images: %.2f' % accuracy)
+        checkpoint_callback = ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1, dirpath="trained_models",
+                                              filename=config.experiment_name + '_{epoch}-{val_loss:.2f}')
 
-        sample = next(iter(test_dl))
-        imgs, lbls = sample
-        imgs, lbls = imgs.to(device), lbls.to(device)
-        actual_number = lbls[:10].cpu().numpy()
-        test_output = pl_module.model(imgs[:10])
-        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
-        print(f'Prediction classes: {pred_y}')
-        print(f'Actual classes: {actual_number}')
+
+        # create pytorch lightening module
+        #pl_module = SimpleDCASELitModule(config)
+        # create monitor to keep track of learning rate - we want to check the behaviour of our learning rate schedule
+        lr_monitor = LearningRateMonitor(logging_interval='epoch')
+
+        trainer = pl.Trainer(max_epochs=10,
+                             logger=wandb_logger,
+                             accelerator='gpu',
+                             devices=1,
+                             callbacks=[lr_monitor, checkpoint_callback],
+                             default_root_dir="checkpoints/")
+
+        # start training and validation
+        #trainer.fit(pl_module, train_dataloaders=train_dl, val_dataloaders=val_dl)
+
+        trainer.test(pl_module, dataloaders=test_dl)
+
+        #print('Test Accuracy of the model on the asc test images: %.2f' % accuracy)
+
+        #sample = next(iter(test_dl))
+        #imgs, lbls = sample
+        #imgs, lbls = imgs.to(device), lbls.to(device)
+        #actual_number = lbls[:10].cpu().numpy()
+        #test_output = pl_module.model(imgs[:10])
+        #pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
+        #print(f'Prediction classes: {pred_y}')
+        #print(f'Actual classes: {actual_number}')
 
     else:
         test_data = datasets.MNIST(
@@ -213,16 +243,18 @@ def do_inference(config):
         if mnist is True:
             example_input = imgs[0]
             example_input = example_input[None, :]
+            trainer = None
         else:
-            sample = next(iter(test_dl))
-            imgs, lbls = sample
-            imgs, lbls = imgs.to(device), lbls.to(device)
-            example_input = imgs[0]
+            #sample = next(iter(test_dl))
+            imgs, lbls = None, None
+            #imgs, lbls = imgs.to(device), lbls.to(device)
+            example_input = spectrogram
 
-        prune_highlevel(device, config, pl_module.model, example_input, imgs, lbls, train_dl, val_dl, test_dl)
+        prune_highlevel(device, config, pl_module, pl_module.model, example_input, imgs, lbls, train_dl, val_dl, test_dl, trainer)
 
 
-def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl):
+def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl, trainer):
+
     num_epochs = 10
 
     # 0. importance criterion for parameter selections
@@ -230,15 +262,15 @@ def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl,
 
     # 1. ignore some layers that should not be pruned, e.g., the final classifier layer.
     ignored_layers = []
-    for m in model.modules():
+    for m in pl_module.model.modules():
         if isinstance(m, torch.nn.Conv2d) and m.out_channels == 10:
             ignored_layers.append(m)  # DO NOT prune the final classifier!
 
     # 2. Pruner initialization
     iterative_steps = 5  # You can prune your model to the target sparsity iteratively.
     pruner = tp.pruner.MagnitudePruner(
-        model,
-        example_inputs,
+        pl_module.model.to(device),
+        example_inputs.to(device),
         global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
         importance=imp,  # importance criterion for parameter selection
         iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
@@ -246,15 +278,15 @@ def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl,
         ignored_layers=ignored_layers,
     )
 
-    base_macs, base_nparams = tp.utils.count_ops_and_params(model, example_inputs)
+    base_macs, base_nparams = tp.utils.count_ops_and_params(pl_module.model.to(device), example_inputs)
     for i in range(iterative_steps):
         # 3. the pruner.step will remove some channels from the model with least importance
         pruner.step()
 
         # 4. Do whatever you like here, such as finetuning
-        macs, nparams = tp.utils.count_ops_and_params(model, example_inputs)
+        macs, nparams = tp.utils.count_ops_and_params(pl_module.model.to(device), example_inputs)
         #print(model)
-        print(model(example_inputs).shape)
+        print(pl_module.model(example_inputs).shape)
         print(
             "  Iter %d/%d, Params: %.2f M => %.2f M"
             % (i + 1, iterative_steps, base_nparams / 1e6, nparams / 1e6)
@@ -266,7 +298,7 @@ def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl,
         # finetune your model here
         # finetune(model)
         # ...
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+        optimizer = torch.optim.Adam(pl_module.model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
         schedule_lambda = \
             exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
                                    config.last_lr_value)
@@ -274,31 +306,52 @@ def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl,
         # Train the model
         total_step = len(train_dl)
 
-        for epoch in range(num_epochs):
-            for i, (images, labels) in enumerate(train_dl):
-                images = images.to(device)
-                labels = labels.to(device)
-                output = model(images)
-                #print(labels.shape)
-                #print(output.shape)
-                loss = F.cross_entropy(output, labels, reduction="none")
-                #print(loss)
-                # clear gradients for this training step
-                optimizer.zero_grad()
-                # backpropagation, compute gradients
-                loss.mean().backward()
-                # apply gradients
-                optimizer.step()
-                if (i + 1) % 100 == 0:
-                    print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
-                                                                             loss.mean()))
+        if mnist is True:
+            for epoch in range(num_epochs):
+                for i, (images, labels) in enumerate(train_dl):
+                    images = images.to(device)
+                    labels = labels.to(device)
+                    output = pl_module.model(images)
+                    #print(labels.shape)
+                    #print(output.shape)
+                    loss = F.cross_entropy(output, labels, reduction="none")
+                    #print(loss)
+                    # clear gradients for this training step
+                    optimizer.zero_grad()
+                    # backpropagation, compute gradients
+                    loss.mean().backward()
+                    # apply gradients
+                    optimizer.step()
+                    if (i + 1) % 100 == 0:
+                        print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
+                                                                                 loss.mean()))
+        else:
+            #for epoch in range(num_epochs):
+            #    for i, (images, labels) in enumerate(train_dl):
+            #        images = images.to(device)
+            #        labels = labels.to(device)
+            #        output = model(images)
+                    #print(labels.shape)
+                    #print(output.shape)
+            #        loss = F.cross_entropy(output, labels, reduction="none")
+                    #print(loss)
+                    # clear gradients for this training step
+            #        optimizer.zero_grad()
+                    # backpropagation, compute gradients
+            #        loss.mean().backward()
+                    # apply gradients
+            #        optimizer.step()
+            #        if (i + 1) % 100 == 0:
+            #            print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
+            #                                                                     loss.mean()))
+            trainer.fit(pl_module, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
     print("Pruned model parameters:")
     print(sum(p.numel() for p in model.parameters()))
 
     if mnist is True:
         actual_number = lbls[:10].cpu().numpy()
-        test_output = model(imgs[:10])
+        test_output = pl_module.model(imgs[:10])
         pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
         print(f'Prediction number: {pred_y}')
         print(f'Actual number: {actual_number}')
@@ -307,188 +360,18 @@ def prune_highlevel(device, config, model, example_inputs, imgs, lbls, train_dl,
             correct = 0
             total = 0
             for images, labels in test_dl:
-                test_output = model(images.to(device))
+                test_output = pl_module.model(images.to(device))
                 pred_y = torch.max(test_output, 1)[1].data.squeeze()
                 accuracy = (pred_y == labels.to(device)).sum().item() / float(labels.to(device).size(0))
                 pass
 
         print('Test Accuracy of the pruned model on the 10000 test images: %.2f' % accuracy)
     else:
-        sample = next(iter(test_dl))
-        imgs, lbls = sample
-        imgs, lbls = imgs.to(device), lbls.to(device)
+        trainer.test(pl_module, dataloaders=test_dl)
 
 
-        actual_number = lbls[:10].cpu().numpy()
-        test_output = model(imgs[:10])
-        pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
-        print(f'Prediction number: {pred_y}')
-        print(f'Actual number: {actual_number}')
+    torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name +'.pth')
 
-
-    torch.save(model, 'trained_models/pruned.pth')
-
-
-def finetune(device, config, model, train_dl, num_epochs):
-
-    model.train()
-    import torch.nn.functional as F
-    from helpers.lr_schedule import exp_warmup_linear_down
-    import torch.nn as nn
-    from torch import optim
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-    schedule_lambda = \
-        exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
-                               config.last_lr_value)
-    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
-    # Train the model
-    total_step = len(train_dl)
-
-    for epoch in range(num_epochs):
-        for i, (images, labels) in enumerate(train_dl):
-            # gives batch data, normalize x when iterate train_loader
-            #b_x = Variable(images)  # batch x
-            #b_y = Variable(labels)  # batch y
-
-            labels = labels.to(device)
-            #b_x = b_x.to(device)
-            #b_y = b_y.to(device)
-            #print(images.shape)
-            #print(b_x.shape)
-            #print(b_y.shape)
-            #print(labels.shape)
-            output = model(images.to(device))
-            #output = model(b_x)
-            #print(output[:,0])
-
-            #preds = torch.max(output, 1)[1].data.cpu().numpy().squeeze()
-            #preds = torch.tensor(preds).float()
-            #preds = torch.tensor(preds, requires_grad=True).to(device)
-            print("y_hat: ", output.shape)
-            print("y: ", labels.shape)
-            #loss_fn = nn.CrossEntropyLoss()
-            #loss = loss_fn(preds.float(), labels.float())
-            loss = F.cross_entropy(output, labels, reduction="none")
-
-            # clear gradients for this training step
-            optimizer.zero_grad()
-
-            # backpropagation, compute gradients
-            loss.backward()
-            # apply gradients
-            optimizer.step()
-
-            if (i + 1) % 100 == 0:
-                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
-
-    return model
-
-def retrain(config, model):
-    # logging is done using wandb
-    wandb_logger = WandbLogger(
-        project="PracticalWork",
-        notes="Pipeline for Practical Work",
-        tags=["PracticalWork"],
-        config=config,  # this logs all hyperparameters for us
-        name=config.experiment_name,
-        log_model="all"
-    )
-
-    checkpoint_callback = ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1, dirpath="trained_models",
-                                          filename=config.experiment_name + '_{epoch}-{val_loss:.2f}')
-
-
-    # MNIST dataset
-    train_data = datasets.MNIST(
-        root='data',
-        train=True,
-        transform=ToTensor(),
-        download=True,
-    )
-
-    train_subset, val_subset = torch.utils.data.random_split(
-        train_data, [50000, 10000], generator=torch.Generator().manual_seed(1))
-
-    test_data = datasets.MNIST(
-        root='data',
-        train=False,
-        transform=ToTensor()
-    )
-    if mnist is True:
-        trainset = train_subset
-        valset = val_subset
-        testset = test_data
-    else:
-        trainset = get_training_set(config.cache_path, config.resample_rate, config.roll, config.data_dir)
-        valset = get_val_set(config.cache_path, config.resample_rate, config.data_dir)
-        testset = get_test_set(config.cache_path, config.resample_rate, config.data_dir)
-
-
-    # train dataloader
-    train_dl = DataLoader(dataset=trainset,
-                          worker_init_fn=worker_init_fn,
-                          num_workers=config.num_workers,
-                          batch_size=config.batch_size,
-                          shuffle=True)
-
-    # validation loader
-    val_dl = DataLoader(dataset=valset,
-                        worker_init_fn=worker_init_fn,
-                        num_workers=config.num_workers,
-                        batch_size=config.batch_size)
-
-    # test loader
-    test_dl = DataLoader(dataset=testset,
-                         worker_init_fn=worker_init_fn,
-                         num_workers=config.num_workers,
-                         batch_size=config.batch_size)
-
-    # create monitor to keep track of learning rate - we want to check the behaviour of our learning rate schedule
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    # create the pytorch lightening trainer by specifying the number of epochs to train, the logger,
-    # on which kind of device(s) to train and possible callbacks
-    trainer = pl.Trainer(max_epochs=config.n_epochs,
-                         logger=wandb_logger,
-                         accelerator='gpu',
-                         devices=1,
-                         callbacks=[lr_monitor, checkpoint_callback],
-                         default_root_dir="checkpoints/")
-
-    # start training and validation
-    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
-
-    trainer.test(model, ckpt_path="best", dataloaders=test_dl)
-def prune_advanced(config, device, input):
-    # model is loaded, start pruning
-
-    # load model
-    pl_module_prune = SimpleDCASELitModule(config)
-
-    pl_module_prune.model = torch.load('trained_models/unpruned.pth')
-
-    # disable randomness, dropout, etc...
-    pl_module_prune.model.eval()
-    pl_module_prune.model.to(device)
-
-    print("tp.DependencyGraph().build_dependency")
-    # 1. build dependency graph for resnet18
-    DG = tp.DependencyGraph().build_dependency(pl_module_prune.model, example_inputs=input)
-
-    # 2. Specify the to-be-pruned channels. Here we prune those channels indexed by [2, 6, 9].
-    group = DG.get_pruning_group(pl_module_prune.model.in_c, tp.prune_conv_in_channels, idxs=[2, 6, 9])
-
-    # 3. prune all grouped layers that are coupled with model.conv1 (included).
-    if DG.check_pruning_group(group):  # avoid full pruning, i.e., channels=0.
-        group.prune()
-
-    # 4. Save & Load
-    pl_module_prune.model.zero_grad()  # We don't want to store gradient information
-    torch.save(pl_module_prune.model, 'trained_models/pruned.pth')  # without .state_dict
-    model = torch.load('trained_models/pruned.pth')  # load the model object
-
-    print("Pruned model parameters:")
-    print(sum(p.numel() for p in pl_module_prune.model.parameters()))
-    #nessi.get_model_size(model, 'torch', input_size=spectrogram.size())
 
 if __name__ == '__main__':
     # simplest form of specifying hyperparameters using argparse

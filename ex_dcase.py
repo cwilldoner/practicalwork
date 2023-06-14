@@ -19,6 +19,8 @@ import nessi
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
+mnist = False
+
 class SimpleDCASELitModule(pl.LightningModule):
     """
     This is a Pytorch Lightening Module.
@@ -78,8 +80,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         :param x: batch of raw audio signals (waveforms)
         :return: final model predictions
         """
-        #if self.config.mnist is False:
-        x = self.mel_forward(x)
+        if mnist is False:
+            x = self.mel_forward(x)
         x = self.model(x)
         return x
 
@@ -108,15 +110,15 @@ class SimpleDCASELitModule(pl.LightningModule):
         """
         x, y = train_batch  # we get a batch of raw audio signals and labels as defined by our dataset
         bs = x.size(0)
-        #if self.config.mnist is False:
-        x = self.mel_forward(x)  # we convert the raw audio signals into log mel spectrograms
-        # apply mixstyle to spectorgrams
-        if self.mixstyle_p > 0:
-            x = mixstyle(x, self.mixstyle_p, self.mixstyle_alpha)
+        if mnist is False:
+            x = self.mel_forward(x)  # we convert the raw audio signals into log mel spectrograms
+            # apply mixstyle to spectorgrams
+            if self.mixstyle_p > 0:
+                x = mixstyle(x, self.mixstyle_p, self.mixstyle_alpha)
 
-        if args.mixup_alpha: # and self.config.mnist is False:
+        if self.mixup_alpha and mnist is False:
             # Apply Mixup, a very common data augmentation method
-            rn_indices, lam = mixup(bs, args.mixup_alpha)  # get shuffled indices and mixing coefficients
+            rn_indices, lam = mixup(bs, self.mixup_alpha)  # get shuffled indices and mixing coefficients
             # send mixing coefficients to correct device and make them 4-dimensional
             lam = lam.to(x.device).reshape(bs, 1, 1, 1)
             # mix two spectrograms from the batch
@@ -167,8 +169,8 @@ class SimpleDCASELitModule(pl.LightningModule):
         # similar to 'training_step' but without any data augmentation
         # pytorch lightening takes care of 'with torch.no_grad()' and 'model.eval()'
         x, y = val_batch
-        #if self.config.mnist is False:
-        x = self.mel_forward(x)
+        if mnist is False:
+            x = self.mel_forward(x)
         y_hat = self.model(x)
         loss = F.cross_entropy(y_hat, y)
         return {'val_loss': loss}
@@ -192,8 +194,9 @@ class SimpleDCASELitModule(pl.LightningModule):
         return results
 
     def test_epoch_end(self, outputs):
+        #print(outputs)
         # MNIST dataset
-        if self.config.mnist is True:
+        if mnist is True:
             c_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         else:
         # ASC dataset
@@ -256,7 +259,7 @@ def train(config):
     valset = get_val_set(config.cache_path, config.resample_rate, config.data_dir)
     testset = get_test_set(config.cache_path, config.resample_rate, config.data_dir)
 
-    if config.mnist is True:
+    if mnist is True:
         trainset = train_subset
         valset = val_subset
         testset = test_data
@@ -364,7 +367,7 @@ if __name__ == '__main__':
     parser.add_argument('--fmin_aug_range', type=int, default=1)  # data augmentation: vary 'fmin' and 'fmax'
     parser.add_argument('--fmax_aug_range', type=int, default=1000)
     parser.add_argument('--data_dir', type=str, default="../malach23/malach/datasets/dataset")
-    parser.add_argument('--mnist', default=False)
+    #parser.add_argument('--mnist', default=False)
 
     args = parser.parse_args()
 
