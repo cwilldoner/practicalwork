@@ -10,4 +10,4 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 4.) This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
 
 
-5.) The whole steps are repeated for ASC dataset instead of MNISt dataset.
+5.) The whole steps are repeated for ASC dataset (https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification) instead of MNISt dataset.
