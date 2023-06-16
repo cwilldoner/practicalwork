@@ -23,9 +23,17 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
 
 This model has 59k params
+wandb Results:
+
+https://api.wandb.ai/links/dcase2023/sxurf83w
 
 2.) Train bigger model (and rename experiment_name):
 
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
 
 This model 131k params
+wandb Results:
+
+https://api.wandb.ai/links/dcase2023/spadhdku
+
+3.) Prune big model
