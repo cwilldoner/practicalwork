@@ -37,3 +37,5 @@ wandb Results:
 https://api.wandb.ai/links/dcase2023/spadhdku
 
 3.) Prune big model
+
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=True
