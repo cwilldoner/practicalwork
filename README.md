@@ -17,7 +17,7 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## reproduce workflow for MNIST:
 
-1. Train (small = original) CP Resnet (channel_width='24 48 72') on MNIST:
+**1. Train (small = original) CP Resnet (channel_width='24 48 72') on MNIST:**
 
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
@@ -28,7 +28,7 @@ This model has 59k params
 
 https://api.wandb.ai/links/dcase2023/sxurf83w
 
-2. Train bigger model (and rename experiment_name):
+**2. Train bigger model (and rename experiment_name):**
 
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
@@ -40,7 +40,7 @@ This model 131316 params
 
 https://api.wandb.ai/links/dcase2023/spadhdku
 
-3. Prune and fine-tune big model
+**3. Prune and fine-tune big model**
 
 ```
 python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=1 --mnist=1
