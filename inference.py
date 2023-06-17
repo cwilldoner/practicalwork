@@ -26,7 +26,6 @@ from torchvision.transforms import ToTensor
 from datasets.audiodataset import get_test_set, get_val_set, get_training_set
 from helpers.lr_schedule import exp_warmup_linear_down
 
-mnist = False
 
 def create_dataset_config(dataset_path):
     """
@@ -56,13 +55,15 @@ def do_inference(config):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     # load model
-    #pl_module = SimpleDCASELitModule(config)
-    pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path="trained_models/cpresnet_big_asc_epoch=30-val_loss=1.36.ckpt")
-    #mymodel = torch.load(modelpath)
-    #pl_module.model.load_state_dict(torch.load(modelpath), strict=False)
-    #print(pl_module.model.state_dict())
-
-    #pl_module.model = torch.load(config.modelpath)
+    #if config.mnist == 1:
+    #    pl_module = SimpleDCASELitModule(config)
+    #    pl_module.model = torch.load(config.modelpath)
+    #else:
+    if config.prune == 1:
+        pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path=config.modelpath)
+    else:
+        pl_module = SimpleDCASELitModule(config)
+        pl_module.model = torch.load(config.modelpath)
 
     # disable randomness, dropout, etc...
     pl_module.model.eval()
@@ -88,7 +89,7 @@ def do_inference(config):
         transform=ToTensor()
     )
 
-    if mnist:
+    if config.mnist == 1:
         trainset = train_subset
         valset = val_subset
         testset = test_data
@@ -118,7 +119,7 @@ def do_inference(config):
                          num_workers=config.num_workers,
                          batch_size=config.batch_size)
 
-    if mnist is False:
+    if config.mnist == 0:
         # model to preprocess waveform into mel spectrograms
         mel = AugmentMelSTFT(n_mels=config.n_mels, sr=config.resample_rate, win_length=config.window_size, hopsize=config.hop_size, n_fft=config.n_fft)
         mel.to(device)
@@ -229,18 +230,38 @@ def do_inference(config):
         print(f'Prediction number: {pred_y}')
         print(f'Actual number: {actual_number}')
 
-    if config.prune:
+        if config.prune == 1:
+            print("")
+        else:
+            wandb_logger = WandbLogger(
+                project="PracticalWork",
+                notes="Pipeline for Practical Work",
+                tags=["PracticalWork"],
+                config=config,  # this logs all hyperparameters for us
+                name=config.experiment_name,
+                log_model="all"
+            )
+            lr_monitor = LearningRateMonitor(logging_interval='epoch')
+            trainer = pl.Trainer(max_epochs=10,
+                                 logger=wandb_logger,
+                                 accelerator='gpu',
+                                 devices=1,
+                                 callbacks=lr_monitor,
+                                 default_root_dir="trained_models/")
+            trainer.test(pl_module, dataloaders=test_dl)
+
+    if config.prune == 1:
         print("==============================================================================")
         print("Prune model")
         # save unpruned model
-        torch.save(pl_module.model, "trained_models/unpruned.pth")
+        torch.save(pl_module.model, "trained_models/" + config.experiment_name + "_unpruned.pth")
 
         print("Unpruned size:")
         print("Model parameters:")
         print(sum(p.numel() for p in pl_module.model.parameters()))
         print_size_of_model(pl_module.model)
 
-        if mnist is True:
+        if config.mnist == 1:
             example_input = imgs[0]
             example_input = example_input[None, :]
             trainer = None
@@ -255,7 +276,7 @@ def do_inference(config):
 
 def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl, trainer):
 
-    num_epochs = 10
+    num_epochs = 20
 
     # 0. importance criterion for parameter selections
     imp = tp.importance.MagnitudeImportance(p=2, group_reduction='mean')
@@ -267,14 +288,14 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             ignored_layers.append(m)  # DO NOT prune the final classifier!
 
     # 2. Pruner initialization
-    iterative_steps = 5  # You can prune your model to the target sparsity iteratively.
+    iterative_steps = 6  # You can prune your model to the target sparsity iteratively.
     pruner = tp.pruner.MagnitudePruner(
         pl_module.model.to(device),
         example_inputs.to(device),
         global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
         importance=imp,  # importance criterion for parameter selection
         iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-        ch_sparsity=0.2,  # remove 20% channels
+        ch_sparsity=0.4,  # remove 40% channels
         ignored_layers=ignored_layers,
     )
 
@@ -306,7 +327,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
         # Train the model
         total_step = len(train_dl)
 
-        if mnist is True:
+        if config.mnist == 1:
             for epoch in range(num_epochs):
                 for i, (images, labels) in enumerate(train_dl):
                     images = images.to(device)
@@ -349,7 +370,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
     print("Pruned model parameters:")
     print(sum(p.numel() for p in model.parameters()))
 
-    if mnist is True:
+    if config.mnist == 1:
         actual_number = lbls[:10].cpu().numpy()
         test_output = pl_module.model(imgs[:10])
         pred_y = torch.max(test_output, 1)[1].data.cpu().numpy().squeeze()
@@ -367,7 +388,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
 
         print('Test Accuracy of the pruned model on the 10000 test images: %.2f' % accuracy)
     else:
-        trainer.test(pl_module, dataloaders=test_dl)
+        trainer.test(pl_module, ckpt_path="best", dataloaders=test_dl)
 
 
     torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name +'.pth')
@@ -439,8 +460,8 @@ if __name__ == '__main__':
     parser.add_argument('--fmax', type=int, default=None)
     parser.add_argument('--fmin_aug_range', type=int, default=1)  # data augmentation: vary 'fmin' and 'fmax'
     parser.add_argument('--fmax_aug_range', type=int, default=1000)
-
-    parser.add_argument('--prune', default=False)
+    parser.add_argument('--mnist', type=int, default=0)
+    parser.add_argument('--prune', type=int, default=0)
 
     args = parser.parse_args()
 
