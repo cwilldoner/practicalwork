@@ -6,9 +6,7 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 
 2.) Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
 
-3.) Then this model is pruned by '''Torch Pruning''' (https://github.com/VainF/Torch-Pruning/tree/master) to get same complexity as the model in 1.)
-
-4.) This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
+3.) Then this model is structure-pruned by '''Torch Pruning''' (https://github.com/VainF/Torch-Pruning/tree/master) to get same complexity as the model in 1.), specifically the Magnitude Pruner is used. This method removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ### ASC
@@ -31,11 +29,23 @@ https://api.wandb.ai/links/dcase2023/sxurf83w
 
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
 
-This model 131k params
+This model 131316 params
 wandb Results:
 
 https://api.wandb.ai/links/dcase2023/spadhdku
 
-3.) Prune big model
+3.) Prune and fine-tune big model
 
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=True --mnist=1
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=1 --mnist=1
+
+Pruned model parameters (with 40% channel sparsity): 47349
+
+Fine-tuned iteratively on each prune stage
+
+Run test on pruned model:
+
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/pruned_mnist_prune.pth --channel_width='32 64 128' --prune=0 --mnist=1
+
+wandb Results:
+
+https://api.wandb.ai/links/dcase2023/f98vr3de
