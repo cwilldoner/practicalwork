@@ -59,3 +59,42 @@ python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --
 **wandb Results:**
 
 https://api.wandb.ai/links/dcase2023/f98vr3de
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## reproduce workflow for ASC:
+
+**_4. Train (small = original) CP Resnet (channel_width='24 48 72') on ASC:_**
+
+```
+python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
+```
+
+**wandb Results:**
+
+**_5. Train bigger model (and rename experiment_name):_**
+
+```
+python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0 --channel_width='32 64 128'
+```
+
+This model 131316 params
+
+**wandb Results:**
+
+**_6. Prune and fine-tune big model_**
+
+```
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
+```
+
+**Pruned model parameters (with 40% channel sparsity): XXXXX**
+
+Fine-tuned iteratively on each prune stage
+
+Run test on pruned model:
+
+```
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/pruned_asc_prune.pth --channel_width='32 64 128' --prune=0 --mnist=0
+```
+
+**wandb Results:**
