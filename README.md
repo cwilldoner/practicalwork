@@ -71,6 +71,8 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr
 
 **wandb Results:**
 
+https://api.wandb.ai/links/dcase2023/vct47kfo
+
 **_5. Train bigger model (and rename experiment_name):_**
 
 ```
