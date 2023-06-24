@@ -3,7 +3,7 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification) datasets and pruned by structured pruning technique. Those models are compared and the goal was to have better accuracy by lower model complexity due to structured pruning.
 
 # Pruning technique #
-The used pruning technique falls under structured pruning. The used pruning framework is from **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which is a Repo which consists of numerous pruning methods and functions with PyTorch. I decided for Magnitude Pruning, which is a high-level pruning technique, that means 
+The used pruning technique falls under structured pruning. The used pruning framework is from **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which is a Repo which consists of numerous pruning methods and functions with PyTorch. Those methods rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. I opted for the **Magnitude Pruner**, since there was an example in their tutorial and it looked doable. The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, the amount of channel sparsity and in how many iterations the channel sparsity should be reached.
 The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.08710.pdf
 
 ## MNIST
@@ -11,7 +11,7 @@ The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.
 
 2. Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
 
-3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. This method **removes weights with small magnitude** in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
+3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## ASC
