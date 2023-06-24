@@ -114,4 +114,4 @@ https://api.wandb.ai/links/dcase2023/ri1c686m
 
 The accuracy of the pruned model (54706 params) in comparison of the original small CPResnet (59000) is now slightly better
 
-![alt text](https://github.com/cwilldoner/practicalwork/mac.png?raw=true)
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac.png?raw=true)
