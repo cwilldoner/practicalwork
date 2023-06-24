@@ -1,12 +1,17 @@
 # Practical Work in AI Master
 This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception
+A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification) datasets and pruned by structured pruning technique. Those models are compared and the goal was to have better accuracy by lower model complexity due to structured pruning.
+
+# Pruning technique #
+The used pruning technique falls under structured pruning. The used pruning framework is from **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which is a Repo which consists of numerous pruning methods and functions with PyTorch. I decided for Magnitude Pruning, which is a high-level pruning technique, that means 
+The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.08710.pdf
 
 ## MNIST
 1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
 
 2. Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
 
-3. Then this model is structure-pruned by **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. This method **removes weights with small magnitude** in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
+3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. This method **removes weights with small magnitude** in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## ASC
