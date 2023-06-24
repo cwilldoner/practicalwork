@@ -113,6 +113,8 @@ python inference.py --batch_size=64 --base_channels=128 --weight_decay=0.001 --l
 **wandb Results:**
 https://api.wandb.ai/links/dcase2023/ri1c686m
 
-The accuracy of the pruned model **asc_prune_35_wd_bs64** (35% channel sparsity, weight_decay=0.001, batchsize=64, 54706 params) in comparison of the original small CPResnet **cpresnet_asc_small** (59000) is now slightly better as can be seen in the diagram below.
+**Macro accuracy**
+
+The macro accuracy of the pruned model **asc_prune_35_wd_bs64** (35% channel sparsity, weight_decay=0.001, batchsize=64, 54706 params) in comparison of the original small CPResnet **cpresnet_asc_small** (weight_decay=0.003, batchsize=256, 59000 params) is now slightly better as can be seen in the diagram below. It is even better as the big CPResnet with 131316 params, which has 0.5026 accuracy (all fine-tuned models start at this accuracy since from this model the pruning and fine-tuning process starts).
 
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac.png?raw=true)
