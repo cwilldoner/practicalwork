@@ -385,9 +385,11 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
                 pass
 
         print('Test Accuracy of the pruned model on the 10000 test images: %.2f' % accuracy)
+        pl_module.model.zero_grad()
         torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name + '.pth')
     else:
         trainer.test(pl_module, dataloaders=test_dl)
+        pl_module.model.zero_grad()
         torch.save(pl_module.model.state_dict(), 'trained_models/pruned_' + config.experiment_name + '_statedict.pth')
         torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name + '_lightningmodel.pth')
 
