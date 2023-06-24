@@ -105,13 +105,14 @@ python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --
 
 https://api.wandb.ai/links/dcase2023/p9g9unz3
 
-The results are a bit more bad than the original small CPResnet, thus different hyper params will now be used:
+The results are a bit more bad than the original small CPResnet, thus different hyper params will now be used, namely weight_decay is set to 0.001 and batch_size is set to 64:
 
+```
 python inference.py --batch_size=64 --base_channels=128 --weight_decay=0.001 --lr=0.001 --experiment_name="asc_prune_35_wd_bs64" --modelpath=trained_models/cpresnet_asc_big_epoch=49-val_loss=1.39.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
-
+```
 **wandb Results:**
 https://api.wandb.ai/links/dcase2023/ri1c686m
 
-The accuracy of the pruned model (54706 params) in comparison of the original small CPResnet (59000) is now slightly better
+The accuracy of the pruned model **asc_prune_35_wd_bs64** (35% channel sparsity, weight_decay=0.001, batchsize=64, 54706 params) in comparison of the original small CPResnet **cpresnet_asc_small** (59000) is now slightly better as can be seen in the diagram below.
 
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac.png?raw=true)
