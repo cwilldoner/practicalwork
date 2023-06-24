@@ -91,9 +91,9 @@ https://api.wandb.ai/links/dcase2023/tjgwglew
 python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
 ```
 
-**Pruned model parameters (with 40% channel sparsity): XXXXX**
+**Pruned model parameters (with 35% channel sparsity): XXXXX**
 
-Fine-tuned iteratively on each prune stage
+Fine-tuned iteratively on each prune stage (1 stage used), same hyper params as ever
 
 Run test on pruned model:
 
@@ -102,3 +102,7 @@ python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --
 ```
 
 **wandb Results:**
+
+https://api.wandb.ai/links/dcase2023/p9g9unz3
+
+The results are a bit more bad than the original small CPResnet, thus different hyper params will now be used
