@@ -83,6 +83,8 @@ This model 131316 params
 
 **wandb Results:**
 
+https://api.wandb.ai/links/dcase2023/tjgwglew
+
 **_6. Prune and fine-tune big model_**
 
 ```
