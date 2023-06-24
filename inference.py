@@ -25,7 +25,7 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor
 from datasets.audiodataset import get_test_set, get_val_set, get_training_set
 from helpers.lr_schedule import exp_warmup_linear_down
-
+from torch.utils.data import DataLoader
 
 def create_dataset_config(dataset_path):
     """
@@ -97,8 +97,6 @@ def do_inference(config):
         trainset = get_training_set(config.cache_path, config.resample_rate, config.roll, "../malach23/malach/datasets/dataset")
         valset = get_val_set(config.cache_path, config.resample_rate, "../malach23/malach/datasets/dataset")
         testset = get_test_set(config.cache_path, config.resample_rate, "../malach23/malach/datasets/dataset")
-
-    from torch.utils.data import DataLoader
 
     # train dataloader
     train_dl = DataLoader(dataset=trainset,
@@ -175,7 +173,7 @@ def do_inference(config):
         # create monitor to keep track of learning rate - we want to check the behaviour of our learning rate schedule
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
-        trainer = pl.Trainer(max_epochs=10,
+        trainer = pl.Trainer(max_epochs=config.n_epochs,
                              logger=wandb_logger,
                              accelerator='gpu',
                              devices=1,
@@ -184,7 +182,7 @@ def do_inference(config):
 
         # start training and validation
         #trainer.fit(pl_module, train_dataloaders=train_dl, val_dataloaders=val_dl)
-
+        #trainer.fit(pl_module, ckpt_path=config.modelpath)
         trainer.test(pl_module, dataloaders=test_dl)
 
         #print('Test Accuracy of the model on the asc test images: %.2f' % accuracy)
@@ -277,7 +275,7 @@ def do_inference(config):
 def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl, trainer):
 
     num_epochs = 20
-
+    pl_module.model.train()
     # 0. importance criterion for parameter selections
     imp = tp.importance.MagnitudeImportance(p=2, group_reduction='mean')
 
@@ -288,14 +286,14 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             ignored_layers.append(m)  # DO NOT prune the final classifier!
 
     # 2. Pruner initialization
-    iterative_steps = 6  # You can prune your model to the target sparsity iteratively.
+    iterative_steps = 1  # You can prune your model to the target sparsity iteratively.
     pruner = tp.pruner.MagnitudePruner(
         pl_module.model.to(device),
         example_inputs.to(device),
         global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
         importance=imp,  # importance criterion for parameter selection
         iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-        ch_sparsity=0.4,  # remove 40% channels
+        ch_sparsity=0.35,  # remove 35% channels
         ignored_layers=ignored_layers,
     )
 
@@ -387,11 +385,14 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
                 pass
 
         print('Test Accuracy of the pruned model on the 10000 test images: %.2f' % accuracy)
+        torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name + '.pth')
     else:
-        trainer.test(pl_module, ckpt_path="best", dataloaders=test_dl)
+        trainer.test(pl_module, dataloaders=test_dl)
+        torch.save(pl_module.model.state_dict(), 'trained_models/pruned_' + config.experiment_name + '_statedict.pth')
+        torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name + '_lightningmodel.pth')
 
 
-    torch.save(pl_module.model, 'trained_models/pruned_' + config.experiment_name +'.pth')
+
 
 
 if __name__ == '__main__':
