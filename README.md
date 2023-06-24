@@ -3,8 +3,8 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification) datasets and pruned by structured pruning technique. Those models are compared and the goal was to have better accuracy by lower model complexity due to structured pruning.
 
 # Pruning technique #
-The used pruning technique falls under structured pruning. The used pruning framework is from **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which is a Repo which consists of numerous pruning methods and functions with PyTorch. Those methods rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. I opted for the **Magnitude Pruner**, since there was an example in their tutorial and it looked doable. The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, the amount of channel sparsity and in how many iterations the channel sparsity should be reached.
-The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.08710.pdf
+The used pruning technique falls under structured pruning. The used pruning framework is from **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which is a Repo which consists of numerous pruning methods and functions with PyTorch. Those methods rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. I opted for the **Magnitude Pruner**, since there was an example in their tutorial and it looked doable. The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer. The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.08710.pdf
+Other available high-level pruners are **BatchNormScalePruner** and **GroupNormPruner**
 
 ## MNIST
 1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
@@ -98,7 +98,7 @@ python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --
 
 **Pruned model parameters (with 35% channel sparsity): 54706**
 
-Fine-tuned iteratively on each prune stage (1 stage used), same hyper params as ever
+Fine-tuned iteratively on each prune stage (only 1 iteration stage used), same hyper params as ever
 
 Run test on pruned model:
 
