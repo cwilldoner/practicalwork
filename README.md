@@ -1,5 +1,6 @@
 # Practical Work in AI Master
 This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception
+
 A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification) datasets and pruned by structured pruning technique. Those models are compared and the goal is to have better accuracy by lower model complexity due to structured pruning.
 
 # Pruning #
@@ -8,8 +9,10 @@ A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.
 
 Pruning is the technique of removing weights or filters from a deep neural network to decrease computation and parameter storage overhead. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training.
 ## Unstructured pruning ##
-The more straight-forward technique is unstructured pruning where weights are set to zero. This does not alter the complexity of the network in an architectural manner.
+The most straight-forward technique is unstructured pruning where weights are simply set to zero. This does not alter the complexity of the network in an architectural manner, which does unfortunately not lead to any acceleration in matrix computation, since multiplications with zeros (and the accumulations), so called sparse matrix computations, are still performed. The advantage is, it is easy to implement and there is no problem with filter shapes inside the network since they stay the same.
 ## Structured pruning ##
+The more complex way is to remove whole filters from the network, since removing a filter results in removing the feature map it outputs too and the consecutive kernels from the consecutive layer.
+
 The used pruning framework is **Torch Pruning** (https://github.com/VainF/Torch-Pruning/tree/master) which consists of numerous pruning methods and functions with PyTorch. Those are all structured pruning methods and they rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. I opted for the **Magnitude Pruner**, since there was an example in their tutorial and it looked doable. The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer. The paper of the Magnitude Pruner can be found here: https://arxiv.org/pdf/1608.08710.pdf
 
 Other available high-level pruners are **BatchNormScalePruner** and **GroupNormPruner**
