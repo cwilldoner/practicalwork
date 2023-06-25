@@ -1,7 +1,7 @@
 # Practical Work in AI Master
-This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception
+This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception.
 
-A CNN for multi-class classification is trained on MNIST and ASC ([1]) datasets and pruned by structured pruning technique. Those models are compared and the goal is to have better accuracy by lower model complexity due to structured pruning.
+A CNN for multi-class classification is trained on MNIST and ASC ([1]) datasets and pruned by structured pruning technique. Those models are compared and the goal is to have better accuracy by lower model complexity due to structured pruning. The work is based on the MALACH 23 course where a CNN was already trained on ASC, thus meaningful hyperparams where already found, but no pruning technique was applied.
 
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [2]
@@ -24,7 +24,7 @@ At first, the pipeline is set up with a minimal example, in this case the MNIST 
 
 3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
 
-4. The whole steps are repeated for **ASC** dataset instead of MNISt dataset.
+4. The whole steps are repeated for **ASC** dataset.
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## reproduce workflow for MNIST:
