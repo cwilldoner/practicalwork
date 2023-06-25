@@ -103,24 +103,17 @@ https://api.wandb.ai/links/dcase2023/tjgwglew
 python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
 ```
 
-**Pruned model parameters (with 35% channel sparsity): 54706**
-
-Fine-tuned iteratively on each prune stage (only 1 iteration stage used), same hyper params as ever
-
-Run test on pruned model:
-
-```
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/pruned_asc_prune.pth --channel_width='32 64 128' --prune=0 --mnist=0
-```
+The channel sparsity was set to **35%** to achieve approximately the same amount of params than the small CPResnet model. It resulted in even about 5k less params of **54706**.
+Best results were found when only one iteration stage was used. The hyper params where the same as before.
 
 **wandb Results:**
 
 https://api.wandb.ai/links/dcase2023/p9g9unz3
 
-The results are a bit more bad than the original small CPResnet, thus different hyper params will now be used, namely weight_decay is set to 0.001 and batch_size is set to 64:
+The results on accuracy were a bit worse than the original small CPResnet, thus different hyper params will now be used, namely **weight_decay** is set to 0.001 and **batch_size** is set to 64:
 
 ```
-python inference.py --batch_size=64 --base_channels=128 --weight_decay=0.001 --lr=0.001 --experiment_name="asc_prune_35_wd_bs64" --modelpath=trained_models/cpresnet_asc_big_epoch=49-val_loss=1.39.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
+python inference.py --batch_size=64 --base_channels=128 --weight_decay=0.001 --lr=0.001 --experiment_name="asc_prune_35_wd_bs64" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
 ```
 **wandb Results:**
 https://api.wandb.ai/links/dcase2023/ri1c686m
