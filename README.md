@@ -135,6 +135,9 @@ The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity
 
 # References #
 [1] https://dcase.community/challenge2023/task-low-complexity-acoustic-scene-classification
+
 [2] https://towardsdatascience.com/neural-network-pruning-101-af816aaea61
+
 [3] https://github.com/VainF/Torch-Pruning/tree/master
+
 [4] https://arxiv.org/pdf/1608.08710.pdf
