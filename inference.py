@@ -59,15 +59,19 @@ def do_inference(config):
     #    pl_module = SimpleDCASELitModule(config)
     #    pl_module.model = torch.load(config.modelpath)
     #else:
-    if config.prune == 1:
+    if config.prune == 1 and config.from_scratch == 0:
         pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path=config.modelpath)
-    else:
+    elif config.prune == 0 and config.from_scratch == 0:
         pl_module = SimpleDCASELitModule(config)
         pl_module.model = torch.load(config.modelpath)
+    elif config.prune == 1 and config.from_scratch == 1:
+        pl_module = SimpleDCASELitModule(config)
 
     # disable randomness, dropout, etc...
     pl_module.model.eval()
     pl_module.model.to(device)
+
+
 
     print("Model parameters:")
     print(sum(p.numel() for p in pl_module.model.parameters()))
@@ -286,16 +290,37 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             ignored_layers.append(m)  # DO NOT prune the final classifier!
 
     # 2. Pruner initialization
-    iterative_steps = 1  # You can prune your model to the target sparsity iteratively.
-    pruner = tp.pruner.MagnitudePruner(
-        pl_module.model.to(device),
-        example_inputs.to(device),
-        global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
-        importance=imp,  # importance criterion for parameter selection
-        iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-        ch_sparsity=0.35,  # remove 35% channels
-        ignored_layers=ignored_layers,
-    )
+    iterative_steps = 6  # You can prune your model to the target sparsity iteratively.
+    if config.pruner == "mag":
+        pruner = tp.pruner.MagnitudePruner(
+            pl_module.model.to(device),
+            example_inputs.to(device),
+            global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
+            importance=imp,  # importance criterion for parameter selection
+            iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
+            ch_sparsity=0.35,  # remove 35% channels
+            ignored_layers=ignored_layers,
+        )
+    elif config.pruner == "bn":
+        pruner = tp.pruner.BNScalePruner(
+            pl_module.model.to(device),
+            example_inputs.to(device),
+            global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
+            importance=imp,  # importance criterion for parameter selection
+            iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
+            ch_sparsity=0.3,  # remove 30% channels
+            ignored_layers=ignored_layers,
+        )
+    elif config.pruner == "gn":
+        pruner = tp.pruner.GroupNormPruner(
+            pl_module.model.to(device),
+            example_inputs.to(device),
+            global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
+            importance=imp,  # importance criterion for parameter selection
+            iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
+            ch_sparsity=0.35,  # remove 35% channels
+            ignored_layers=ignored_layers,
+        )
 
     base_macs, base_nparams = tp.utils.count_ops_and_params(pl_module.model.to(device), example_inputs)
     for i in range(iterative_steps):
@@ -465,6 +490,8 @@ if __name__ == '__main__':
     parser.add_argument('--fmax_aug_range', type=int, default=1000)
     parser.add_argument('--mnist', type=int, default=0)
     parser.add_argument('--prune', type=int, default=0)
+    parser.add_argument('--pruner', type=str, default='mag')
+    parser.add_argument('--from_scratch', type=int, default=0)
 
     args = parser.parse_args()
 
