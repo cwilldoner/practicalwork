@@ -7,7 +7,7 @@ A CNN for multi-class classification is trained on MNIST and ASC (https://dcase.
 
 (mostly summarized from https://towardsdatascience.com/neural-network-pruning-101-af816aaea61)
 
-Pruning is the technique of removing weights or filters from a deep neural network to decrease computation and parameter storage overhead. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training.
+Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training.
 ## Unstructured pruning ##
 The most straight-forward technique is unstructured pruning where weights are simply set to zero. This does not alter the complexity of the network in an architectural manner, which does unfortunately not lead to any acceleration in matrix computation, since multiplications with zeros (and the accumulations), so called sparse matrix computations, are still performed. The advantage is, it is easy to implement and there is no problem with filter shapes inside the network since they stay the same.
 ## Structured pruning ##
