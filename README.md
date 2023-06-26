@@ -136,8 +136,15 @@ The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity
 
 ### Other pruners
 When using the other available pruners like BatchNormScalePruner(_bn) and GroupNormPruner (_gn) the results vary marginally, but BatchNormScalePruner seems to perform best all of three pruner types.
-What is more interesting is that you do not need to train the CPResnet before pruning. You just have to prune first your "empty" network, and after that (or during if you use more iteration steps for pruning) you train the network. The results seem even to be better without using a pre-trained CPResnet (=loading the model from checkpoint). 
+What is more interesting is that you do not need to train the CPResnet before pruning. You just have to prune first your "empty" network, and after that (or during if you use more iteration steps for pruning) you train the network. The results seem even to be better without using a pre-trained CPResnet (=loading the model from checkpoint). In the diagram below the _fromscratch models are the ones with pruning before training (so far only Magnitude Pruner (**asc_prune_35_wd_bs64_fromscratch**) and BatchNormScalePruner (**asc_prune_35_wd_bs64_fromscratch_bn**) was used from scratch).
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac3.png?raw=true)
+
+| Model  | Parameter | Accuracy |
+| ------------- | ------------- | ------------- |
+| **asc_prune_35_wd_bs64_fromscratch**  | **54706**  | **0.5353**  |
+| asc_prune_35_wd_bs64_fromscratch_bn  | 54706  | 0.5275  |
+
+In general one can say pruning does already meaningful optimization of the network without significant loss of performance.
 
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
