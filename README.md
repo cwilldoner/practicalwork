@@ -118,8 +118,9 @@ python inference.py --batch_size=64 --base_channels=128 --weight_decay=0.001 --l
 **wandb Results:**
 https://api.wandb.ai/links/dcase2023/ri1c686m
 
-**Macro accuracy**
-
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## Results
+### Magnitude Pruner with loading pre-trained CPResnet
 The macro accuracy of the pruned model **asc_prune_35_wd_bs64** (35% channel sparsity, weight_decay=0.001, batchsize=64, 54706 params) in comparison of the original small CPResnet **cpresnet_asc_small** (weight_decay=0.003, batchsize=256, 59000 params) is now slightly better as can be seen in the diagram below. It is even better as the big CPResnet with 131316 params, which has 0.5026 accuracy (all fine-tuned models start at this accuracy since from this model the pruning and fine-tuning process starts).
 The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity, weight_decay=0.001, batchsize=128, 54706 params) and **asc_prune_35** (35% channel sparsity, weight_decay=0.003, batchsize=256, 54706 params)
 
@@ -133,6 +134,9 @@ The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity
 | asc_prune_35_wd_bs  | 54706  | 0.4975  |
 | asc_prune_35  | 54706  | 0.4866  |
 
+### Other pruners
+When using the other available pruners like BatchNormScalePruner(_bn) and GroupNormPruner (_gn) the results vary marginally, but BatchNormScalePruner seems to perform best all of three pruner types.
+What is more interesting is that you do not need to train the CPResnet before pruning. You just have to prune first your "empty" network, and after that (or during if you use more iteration steps for pruning) you train the network. The results seem even to be better without using a pre-trained CPResnet (=loading the model from checkpoint). 
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac3.png?raw=true)
 
 ## References
