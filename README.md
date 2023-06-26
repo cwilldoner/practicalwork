@@ -144,7 +144,7 @@ What is more interesting is that you do not need to train the CPResnet before pr
 | **asc_prune_35_wd_bs64_fromscratch**  | **54706**  | **0.5353**  |
 | asc_prune_35_wd_bs64_fromscratch_bn  | 54706  | 0.5275  |
 
-In general one can say pruning does already meaningful optimization of the network without significant loss of performance.
+In general one can say pruning does already meaningful optimization of the network without significant loss of performance, so fine-tuning might not be completely necessary.
 
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
