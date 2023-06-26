@@ -133,6 +133,8 @@ The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity
 | asc_prune_35_wd_bs  | 54706  | 0.4975  |
 | asc_prune_35  | 54706  | 0.4866  |
 
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac3.png?raw=true)
+
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
 
