@@ -155,4 +155,4 @@ In general one can say pruning does already meaningful optimization of the netwo
 
 [4] https://github.com/VainF/Torch-Pruning/tree/master
 
-[5] https://arxiv.org/pdf/1608.08710.pdf
+[5] H. Li, A. Kadav, Ig. Durdanovic, H. Samet, H. P. Graf (2017). Pruning Filters for Efficient ConvNets. ICLR 2017 5th International Conference on Learning Representations
