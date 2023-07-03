@@ -2,6 +2,7 @@
 This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception. The code is fully based on PyTorch.
 
 A CNN for multi-class classification is trained on MNIST ([1]) and ASC ([2]) datasets and pruned by structured pruning technique. Those models are compared and the goal is to have better accuracy by lower model complexity due to structured pruning. The work is based on the MALACH 23 course where a CNN was already trained on ASC, thus meaningful hyperparams where already found, but no pruning technique was applied.
+The training and pruning of the CNN for the MNIST dataset is just for setting up the pipeline, due to its easy handling and it comes in handy that is has 10 ten classes like the ASC dataset. Once the pipeline was set up the user can switch to ASC training by setting the parameter ```--mnist=0```, which is the actual aim of this work.
 
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [3]
