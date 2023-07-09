@@ -153,6 +153,17 @@ python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --l
 
 In general one can say pruning does already meaningful optimization of the network without significant loss of performance, so fine-tuning might not be completely necessary.
 
+Experiments:
+
+pruning before and then training (from scratch models) lead to same results as pre-trained model and pruning after it (incl. fine-tuning)
+
+checked with epochs = 100, no improvement
+
+checked with different LR scheduler: ReduceLROnPlateau: 
+
+
+## Results
+
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
 
