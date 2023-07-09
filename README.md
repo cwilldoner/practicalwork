@@ -47,16 +47,16 @@ Test results:
 This is the baseline. This experiment is executed three times and the average of the test accuracy (mac_acc) and test loss (test_loss) on the test dataset for those experiments is taken and shown in the next table below:
 | model  | CPReset original | 
 | ------------- | ------------- |
-| average accuracy  | 0.500  |
-| average loss  | 1.400  |
+| average accuracy  | 0.50553  |
+| average loss  | 1.38185  |
 
 ## Increase size of CPResnet original and train it
 Now, the size of the CPResnet original network is increased to get a bigger model, which can be pruned, to show the difference of the original to a pruned version.
-The size is increased by setting the parameter **channel multiplier** to 2. This increases the parameters from 47028 parameters to ____ parameters.
+The size is increased by setting the parameter **channel multiplier** to 2. This increases the parameters from 47028 parameters to 131316 parameters.
 This new big model, in the following called **CPResnet big**, is trained with the same hyperparameters, except for the channel multiplier of course.
 | model  | CPResnet big | 
 | ------------- | ------------- |
-| **parameters**  | **_____**  |
+| **parameters**  | **131316**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
@@ -82,7 +82,7 @@ This is an intermediate result for the whole pruning experiment. This big model 
 
 ## Prune CPResnet big
 Now, the CPResnet big is pruned by the different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
-In this step, one has to use the inference.py script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
+In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
 | **parameters**  | **_____**  |
