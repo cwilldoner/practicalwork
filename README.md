@@ -33,6 +33,7 @@ To train the CPResnet original, several hyperparameters where found in the prece
 | experiment name  | cpresnet_asc_small  |
 | mnist  | 0  |
 | learning rate scheduler | lambdaLR |
+
 To start training type
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
@@ -62,6 +63,7 @@ This new big model, in the following called **CPResnet big**, is trained with th
 | experiment name  | cpresnet_asc_big  |
 | mnist  | 0  |
 | learning rate scheduler | lambdaLR |
+
 To start training type
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
