@@ -1,8 +1,9 @@
 # Practical Work in AI Master
 This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception. The code is fully based on PyTorch.
 
-A CNN for multi-class classification is trained on MNIST ([1]) and ASC ([2]) datasets and pruned by structured pruning technique. Those models are compared and the goal is to have better accuracy by lower model complexity due to structured pruning. The work is based on the MALACH 23 course where a CNN was already trained on ASC, thus meaningful hyperparams where already found, but no pruning technique was applied.
-The training and pruning of the CNN for the MNIST dataset is just for setting up the pipeline, due to its easy handling and it comes in handy that is has 10 ten classes like the ASC dataset. Once the pipeline was set up the user can switch to ASC training by setting the parameter ```--mnist=0```, which is the actual aim of this work.
+A CNN for multi-class classification is trained, first on MNIST ([1]) dataset to set up the pipeline. After that, the actual aim is to train the network on ASC ([2]) dataset and prune it by structured pruning technique. The MNIST dataset is chosen because you do not need any pre-processing steps of the input images and it has 10 classes, like the ASC dataset. 
+
+The used CNN network is a Receptive Field Regularization CNN, originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
 
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [3]
@@ -81,6 +82,7 @@ https://api.wandb.ai/links/dcase2023/f98vr3de
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
 ```
+This model has 59804 parameters
 
 **wandb Results:**
 
@@ -92,7 +94,7 @@ https://api.wandb.ai/links/dcase2023/vct47kfo
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0 --channel_width='32 64 128'
 ```
 
-This model 131316 params
+This model has 131316 parameters
 
 **wandb Results:**
 
@@ -163,6 +165,11 @@ checked with different LR scheduler: ReduceLROnPlateau:
 
 
 ## Results
+
+# Experiments
+not from scratch (pruning after training model)
+from scratch (pruning before training model)
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="asc_prune_35_wd_lr_fromscratch_bn_redLRonPlat_3" --channel_width='32 64 128' --prune=1 --mnist=0 --n_epochs=100 --pruner='bn' --from_scratch=1
 
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
