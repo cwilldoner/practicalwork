@@ -18,7 +18,7 @@ Other available high-level pruners are **BatchNormScalePruner** and **GroupNormP
 
 ## Workflow
 
-At first, the pipeline is set up with a minimal example, in this case the MNIST dataset is used. Here, no pre-processing of the images is used.
+At first, the pipeline is set up with a minimal example, in this case the MNIST dataset is used.
 
 1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
 
@@ -36,7 +36,7 @@ At first, the pipeline is set up with a minimal example, in this case the MNIST 
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
 ```
-This model has 59k params
+This model has 59804 params
 
 **wandb Results:**
 
