@@ -39,7 +39,7 @@ To start training type
 python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
 ```
 
-HERE A DIAGRAM OF ONE WANDBRESULT
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/asc_small.png?raw=true)
 
 This is the baseline. This experiment is executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
 | model  | CPReset original | 
