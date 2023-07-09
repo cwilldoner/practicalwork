@@ -74,11 +74,7 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 -
 
 HERE A DIAGRAM OF A WANDBRESULT
 
-This is an intermediate result for the whole pruning experiment. This big model should be pruned, thus this results are not of big importance. However, this experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
-| model  | CPResnet big | 
-| ------------- | ------------- |
-| average accuracy  | 0.500  |
-| average loss  | 1.400  |
+This is an intermediate result for the whole pruning experiment, thus there is no need to average the results from multiple runs, since we can only take one model to proceed. 
 
 ## Prune CPResnet big
 Now, the CPResnet big is pruned by the different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
