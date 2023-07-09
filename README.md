@@ -21,7 +21,7 @@ Since the aim of this practical work is to show the results for the ASC dataset,
 
 In the MALACH23 course, the **CPReset original** network was configured to have 47028 parameters to achieve satisfying results. This is defined as the upper limit for the **CPResnet pruned** network.
 To train the CPResnet original, several hyperparameters where found in the preceding course MALACH23. The most important used hyperparams for training are listed in the table below:
-| model  | CPReset original | 
+| model  | CPResnet original | 
 | ------------- | ------------- |
 | **parameters**  | **47028**  |
 | batch size  | 256  |
@@ -29,7 +29,7 @@ To train the CPResnet original, several hyperparameters where found in the prece
 | base channels  | 32  |
 | weight decay  | 0.003  |
 | learning rate  | 0.001  |
-| epochs  | 100  |
+| epochs  | 50  |
 | experiment name  | cpresnet_asc_small  |
 | mnist  | 0  |
 | learning rate scheduler | lambdaLR |
@@ -51,7 +51,7 @@ This is the baseline. This experiment is executed three times and the average of
 Now, the size of the CPResnet original network is increased to get a bigger model, which can be pruned, to show the difference of the original to a pruned version.
 The size is increased by setting the parameter **channel multiplier** to 2. This increases the parameters from 47028 parameters to ____ parameters.
 This new big model, in the following called **CPResnet big**, is trained with the same hyperparameters, except for the channel multiplier of course.
-| model  | CPReset big | 
+| model  | CPResnet big | 
 | ------------- | ------------- |
 | **parameters**  | **_____**  |
 | batch size  | 256  |
@@ -59,61 +59,103 @@ This new big model, in the following called **CPResnet big**, is trained with th
 | base channels  | 32  |
 | weight decay  | 0.003  |
 | learning rate  | 0.001  |
-| epochs  | 100  |
+| epochs  | 50  |
 | experiment name  | cpresnet_asc_big  |
 | mnist  | 0  |
 | learning rate scheduler | lambdaLR |
 
 To start training type
 ```
-python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
+python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
 ```
 
 HERE A DIAGRAM OF A WANDBRESULT
 
 This is an intermediate result for the whole pruning experiment. This big model should be pruned, thus this results are not of big importance. However, this experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
-| model  | CPReset big | 
+| model  | CPResnet big | 
 | ------------- | ------------- |
 | average accuracy  | 0.500  |
 | average loss  | 1.400  |
 
 ## Prune CPResnet big
 Now, the CPResnet big is pruned by the different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
+In this step, one has to use the inference.py script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
+| model  | CPResnet pruned | 
+| ------------- | ------------- |
+| **parameters**  | **_____**  |
+| batch size  | 256  |
+| channels_multiplier | 2 |
+| base channels  | 32  |
+| weight decay  | 0.001  |
+| learning rate  | 0.0001  |
+| epochs  | 50  |
+| experiment name  | cpresnet_asc_pruned  |
+| mnist  | 0  |
+| pruned | 1 |
+| channel sparsity | __ |
+| learning rate scheduler | lambdaLR |
+| pruner method | magnitude |
 
+The parameter channel sparsity is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** to be comparable. Thus the parameter resulted in ____ to be removed from the network. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it.
 
-
-**_5. Train bigger model (and rename experiment_name):_**
-
+To start pruning type
 ```
-python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0 --channel_width='32 64 128'
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='mag' --prune=1 --mnist=0
 ```
 
-This model has 131316 parameters
 
-**wandb Results:**
+HERE A DIAGRAM OF A WANDB RESULT
 
-https://api.wandb.ai/links/dcase2023/tjgwglew
 
-**_6. Prune and fine-tune big model_**
+This experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
+| model  | CPResnet pruned | 
+| ------------- | ------------- |
+| average accuracy  | 0.500  |
+| average loss  | 1.400  |
 
+
+
+## Pruning an empty network (from scratch)
+It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
+| model  | CPResnet pruned from scratch | 
+| ------------- | ------------- |
+| **parameters**  | **_____**  |
+| batch size  | 256  |
+| channels_multiplier | 2 |
+| base channels  | 32  |
+| weight decay  | 0.001  |
+| learning rate  | 0.0001  |
+| epochs  | 50  |
+| experiment name  | cpresnet_asc_pruned_fs  |
+| mnist  | 0  |
+| pruned | 1 |
+| channel sparsity | __ |
+| learning rate scheduler | lambdaLR |
+| pruner method | batch normalization |
+
+To start training and pruning from an empty network type
 ```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --experiment_name="asc_prune" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_prune_fs" --prune=1 --mnist=0 --n_epochs=50 --pruner='bn' --from_scratch=1
 ```
 
-The channel sparsity was set to **35%** to achieve approximately the same amount of params than the small CPResnet model. It resulted in even about 5k less params of **54706**.
-Best results were found when only one iteration stage was used. The hyper params where the same as before.
+HERE A DIAGRAM OF A WANDB RESULT
 
-**wandb Results:**
 
-https://api.wandb.ai/links/dcase2023/p9g9unz3
+This experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
+| model  | CPResnet pruned | 
+| ------------- | ------------- |
+| average accuracy  | 0.500  |
+| average loss  | 1.400  |
 
-The results on accuracy were a bit worse than the original small CPResnet, thus different hyper params will now be used, namely **weight_decay** is set to 0.001 and **batch_size** is set to 64:
 
-```
-python inference.py --batch_size=64 --base_channels=32 --weight_decay=0.001 --lr=0.001 --experiment_name="asc_prune_35_wd_bs64" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --channel_width='32 64 128' --prune=1 --mnist=0
-```
-**wandb Results:**
-https://api.wandb.ai/links/dcase2023/ri1c686m
+
+
+
+
+
+
+
+
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Results
