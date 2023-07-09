@@ -72,7 +72,10 @@ To start training type
 python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
 ```
 
-HERE A DIAGRAM OF A WANDBRESULT
+| model  | CPReset big | 
+| ------------- | ------------- |
+| average accuracy  | 0.50623  |
+| average loss  | 1.38185  |
 
 This is an intermediate result for the whole pruning experiment, thus there is no need to average the results from multiple runs, since we can only take one model to proceed. 
 
