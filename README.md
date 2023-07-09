@@ -1,5 +1,5 @@
 # Practical Work in AI Master
-This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception. The code is fully based on PyTorch.
+This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception. The code is fully based on PyTorch. The course is a continuation of the MALACH23 course from the Institute for Computational Perception.
 
 A CNN for multi-class classification is trained, first on MNIST ([1]) dataset to set up the pipeline. After that, the actual aim is to train the network on ASC ([2]) dataset and prune it by structured pruning technique. The MNIST dataset is chosen because you do not need any pre-processing steps of the input images and it has 10 classes, like the ASC dataset. 
 
@@ -16,77 +16,69 @@ The used pruning framework is **Torch Pruning** ([4]) which consists of numerous
 
 Other available high-level pruners are **BatchNormScalePruner** and **GroupNormPruner**
 
-## Workflow
+## Baseline
+Since the aim of this practical work is to show the results for the ASC dataset, it is shown first. For the interested reader the commands for the MNIST pipeline is shown at the bottom of this page.
 
-At first, the pipeline is set up with a minimal example, in this case the MNIST dataset is used.
-
-1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
-
-2. Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
-
-3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
-
-4. The whole steps are repeated for **ASC** dataset.
-
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-## reproduce workflow for MNIST:
-
-**_1. Train (small = original) CP Resnet (channel_width='24 48 72') on MNIST:_**
-
+In the MALACH23 course, the **CPReset original** network was configured to have 47028 parameters to achieve satisfying results. This is defined as the upper limit for the **CPResnet pruned** network.
+To train the CPResnet original, several hyperparameters where found in the preceding course MALACH23. The most important used hyperparams for training are listed in the table below:
+| model  | CPReset original | 
+| ------------- | ------------- |
+| **parameters**  | **47028**  |
+| batch size  | 256  |
+| channels_multiplier | 1 |
+| base channels  | 32  |
+| weight decay  | 0.003  |
+| learning rate  | 0.001  |
+| epochs  | 100  |
+| experiment name  | cpresnet_asc_small  |
+| mnist  | 0  |
+| learning rate scheduler | lambdaLR |
+To start training type
 ```
-python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
-```
-This model has 59804 params
-
-**wandb Results:**
-
-https://api.wandb.ai/links/dcase2023/sxurf83w
-
-**_2. Train bigger model (and rename experiment_name):_**
-
-```
-python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
+python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
 ```
 
-This model 131316 params
+HERE A DIAGRAM OF ONE WANDBRESULT
 
-**wandb Results:**
+This is the baseline. This experiment is executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
+| model  | CPReset original | 
+| ------------- | ------------- |
+| average accuracy  | 0.500  |
+| average loss  | 1.400  |
 
-https://api.wandb.ai/links/dcase2023/spadhdku
-
-**_3. Prune and fine-tune big model_**
-
+## Increase size of CPResnet original and train it
+Now, the size of the CPResnet original network is increased to get a bigger model, which can be pruned, to show the difference of the original to a pruned version.
+The size is increased by setting the parameter **channel multiplier** to 2. This increases the parameters from 47028 parameters to ____ parameters.
+This new big model, in the following called **CPResnet big**, is trained with the same hyperparameters, except for the channel multiplier of course.
+| model  | CPReset big | 
+| ------------- | ------------- |
+| **parameters**  | **_____**  |
+| batch size  | 256  |
+| channels_multiplier | 2 |
+| base channels  | 32  |
+| weight decay  | 0.003  |
+| learning rate  | 0.001  |
+| epochs  | 100  |
+| experiment name  | cpresnet_asc_big  |
+| mnist  | 0  |
+| learning rate scheduler | lambdaLR |
+To start training type
 ```
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=1 --mnist=1
+python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
 ```
 
-**Pruned model parameters (with 40% channel sparsity): 47349**
+HERE A DIAGRAM OF A WANDBRESULT
 
-Fine-tuned iteratively on each prune stage
+This is an intermediate result for the whole pruning experiment. This big model should be pruned, thus this results are not of big importance. However, this experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
+| model  | CPReset big | 
+| ------------- | ------------- |
+| average accuracy  | 0.500  |
+| average loss  | 1.400  |
 
-Run test on pruned model:
+## Prune CPResnet big
+Now, the CPResnet big is pruned by the different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
 
-```
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/pruned_mnist_prune.pth --channel_width='32 64 128' --prune=0 --mnist=1
-```
 
-**wandb Results:**
-
-https://api.wandb.ai/links/dcase2023/f98vr3de
-
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-## reproduce workflow for ASC:
-
-**_4. Train (small = original) CP Resnet (channel_width='24 48 72') on ASC:_**
-
-```
-python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_small" --mnist=0
-```
-This model has 59804 parameters
-
-**wandb Results:**
-
-https://api.wandb.ai/links/dcase2023/vct47kfo
 
 **_5. Train bigger model (and rename experiment_name):_**
 
@@ -170,6 +162,67 @@ checked with different LR scheduler: ReduceLROnPlateau:
 not from scratch (pruning after training model)
 from scratch (pruning before training model)
 python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="asc_prune_35_wd_lr_fromscratch_bn_redLRonPlat_3" --channel_width='32 64 128' --prune=1 --mnist=0 --n_epochs=100 --pruner='bn' --from_scratch=1
+
+
+## Workflow
+
+At first, the pipeline is set up with a minimal example, in this case the MNIST dataset is used.
+
+1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
+
+2. Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
+
+3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
+
+4. The whole steps are repeated for **ASC** dataset.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## reproduce workflow for MNIST:
+
+**_1. Train (small = original) CP Resnet (channel_width='24 48 72') on MNIST:_**
+
+```
+python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
+```
+This model has 59804 params
+
+**wandb Results:**
+
+https://api.wandb.ai/links/dcase2023/sxurf83w
+
+**_2. Train bigger model (and rename experiment_name):_**
+
+```
+python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
+```
+
+This model 131316 params
+
+**wandb Results:**
+
+https://api.wandb.ai/links/dcase2023/spadhdku
+
+**_3. Prune and fine-tune big model_**
+
+```
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=1 --mnist=1
+```
+
+**Pruned model parameters (with 40% channel sparsity): 47349**
+
+Fine-tuned iteratively on each prune stage
+
+Run test on pruned model:
+
+```
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/pruned_mnist_prune.pth --channel_width='32 64 128' --prune=0 --mnist=1
+```
+
+**wandb Results:**
+
+https://api.wandb.ai/links/dcase2023/f98vr3de
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## References
 [1] https://pytorch.org/vision/main/generated/torchvision.datasets.MNIST.html
