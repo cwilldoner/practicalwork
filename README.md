@@ -84,7 +84,7 @@ Now, the CPResnet big is pruned by the different pruner methods supported by the
 In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
-| **parameters**  | **_____**  |
+| **parameters**  | **44000**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
@@ -97,6 +97,7 @@ In this step, one has to use the **inference.py** script instead of the ex_dcase
 | channel sparsity | __ |
 | learning rate scheduler | lambdaLR |
 | pruner method | magnitude |
+| iterative steps | 1 |
 
 The parameter channel sparsity is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** to be comparable. Thus the parameter resulted in ____ to be removed from the network. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it.
 
