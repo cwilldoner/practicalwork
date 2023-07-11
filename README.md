@@ -3,7 +3,7 @@ This is a repository for the practical work in AI Master in SS2023 at the JKU Un
 
 A CNN for multi-class classification is trained, first on MNIST ([1]) dataset to set up the pipeline. After that, the actual aim is to train the network on ASC ([2]) dataset and prune it by structured pruning technique. The MNIST dataset is chosen because you do not need any pre-processing steps of the input images and it has 10 classes, like the ASC dataset. 
 
-The used CNN network is a Receptive Field Regularization CNN, originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
+The used CNN network is a Receptive Field Regularization CNN ([6]), originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
 
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [3]
@@ -281,3 +281,6 @@ https://api.wandb.ai/links/dcase2023/f98vr3de
 [4] https://github.com/VainF/Torch-Pruning/tree/master
 
 [5] H. Li, A. Kadav, Ig. Durdanovic, H. Samet, H. P. Graf (2017). Pruning Filters for Efficient ConvNets. ICLR 2017 5th International Conference on Learning Representations
+
+[6] F. Schmid, S. Masoudian, K. Koutini, G. Widmer (2022). CP-JKU SUBMISSION TO DCASE22: DISTILLING KNOWLEDGE FOR LOW-COMPLEXITY
+CONVOLUTIONAL NEURAL NETWORKS FROM A PATCHOUT AUDIO TRANSFORMER
