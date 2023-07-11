@@ -35,8 +35,6 @@ weights are copied to the new model.
 The BatchNormalizationScale Pruner ...
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
-Other available high-level pruners are **BatchNormScalePruner** and **GroupNormPruner**
-
 ## Baseline
 Since the aim of this practical work is to show the results for the ASC dataset, it is shown first. For the interested reader the commands for the MNIST pipeline is shown at the bottom of this page.
 
