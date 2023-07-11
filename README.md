@@ -94,16 +94,16 @@ In this step, one has to use the **inference.py** script instead of the ex_dcase
 | experiment name  | cpresnet_asc_pruned  |
 | mnist  | 0  |
 | pruned | 1 |
-| channel sparsity | __ |
+| channel sparsity | 0.41 |
 | learning rate scheduler | lambdaLR |
-| pruner method | magnitude |
-| iterative steps | 1 |
+| pruner method | bn |
+| iterative steps | 5 |
 
-The parameter channel sparsity is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** to be comparable. Thus the parameter resulted in ____ to be removed from the network. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it.
+The parameter channel sparsity is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** to be comparable. Thus the parameter resulted in to remove 41% of the channels of the whole network. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it.
 
 To start pruning type
 ```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='mag' --prune=1 --mnist=0
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='bn' --prune=1 --iterative_steps=5 --mnist=0
 ```
 
 
