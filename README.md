@@ -88,12 +88,15 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 -
 
 This is an intermediate result for the whole pruning experiment, thus there is no need to average the results from multiple runs, since we can only take one model to proceed. 
 
-## Prune CPResnet big
+## Experiments
+Experiments were conducted with different types of learning rate scheduler, training from scratch or not, different starting rates for learning rate and weight decay, number of epochs, types of pruners. It was difficult 
+
+### Prune CPResnet big
 Now, the CPResnet big is pruned by different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
 In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
-| **parameters**  | **44800**  |
+| **parameters after pruning**  | **44784**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
@@ -106,7 +109,7 @@ In this step, one has to use the **inference.py** script instead of the ex_dcase
 | channel sparsity | 0.41 |
 | learning rate scheduler | lambdaLR |
 
-The parameter **channel sparsity** is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** (47028) to be comparable. Thus the parameter resulted in to remove 41% of the channels of the whole network. This resulted in 44800 parameters, thus slightly less than the original. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it. The pre-trained CPResnet big is stored under the trained_models folder and the .ckpt file with the best validation loss should be loaded.
+The parameter **channel sparsity** is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** (47028) to be comparable. Thus the parameter resulted in to remove 41% of the channels of the whole network. This resulted in 44784 parameters, thus slightly less than the original. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it. The pre-trained CPResnet big is stored under the trained_models folder and the .ckpt file with the best validation loss should be loaded.
 
 To start pruning type
 ```
@@ -126,110 +129,42 @@ This experiment is also executed three times and the average of the accuracy and
 
 
 
-## Pruning an empty network (from scratch)
+### Pruning an empty network (from scratch)
 It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
 | model  | CPResnet pruned from scratch | 
 | ------------- | ------------- |
-| **parameters after pruning**  | **44800**  |
+| **parameters after pruning**  | **44784**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
 | weight decay  | 0.001  |
 | learning rate  | 0.0001  |
-| epochs  | 50  |
+| epochs  | 150  |
 | experiment name  | cpresnet_asc_pruned_fs  |
 | mnist  | 0  |
 | pruned | 1 |
-| channel sparsity | __ |
-| learning rate scheduler | lambdaLR |
-| pruner method | batch normalization |
+| channel sparsity | 0.41 |
+| learning rate scheduler | reduce LR on plateau |
+| pruner method | magnitude |
 
 To start training and pruning from an empty network type
 ```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_prune_fs" --prune=1 --mnist=0 --n_epochs=50 --pruner='bn' --from_scratch=1
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_fs_4_mag_LRplat" --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --n_epochs=150 --from_scratch=1 --scheduler="reduceLR"
 ```
 
-HERE A DIAGRAM OF A WANDB RESULT
+With the different learning rate schedulers from PyTorch [How to adjust learning rate](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) one might achieve better results. I experimented with the ReduceLROnPlateau scheduler which decreases learning rate when a metric is stuck improving for a defined number of epochs.
+
+Overall results for the best experiment is shown in the picture below:
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/best_results.png?raw=true)
 
 
-This experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
+This experiment is also executed several times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
-| average accuracy  | 0.500  |
-| average loss  | 1.400  |
+| average accuracy  | 0.5083  |
+| average loss  | 1.383  |
 
 
-
-## Experiments
-Experiments were conducted with different types of learning rate scheduler, training from scratch or not, different starting rates for learning rate and weight decay, number of epochs, types of pruners. It was difficult 
-
-
-
-
-
-
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-## Results
-### Magnitude Pruner with loading pre-trained CPResnet
-The macro accuracy of the pruned model **asc_prune_35_wd_bs64** (35% channel sparsity, weight_decay=0.001, batchsize=64, 54706 params) in comparison of the original small CPResnet **cpresnet_asc_small** (weight_decay=0.003, batchsize=256, 59000 params) is now slightly better as can be seen in the diagram below. It is even better as the big CPResnet with 131316 params, which has 0.5026 accuracy (all fine-tuned models start at this accuracy since from this model the pruning and fine-tuning process starts).
-The other models in the diagram are **asc_prune_35_wd_bs** (35% channel sparsity, weight_decay=0.001, batchsize=128, 54706 params) and **asc_prune_35** (35% channel sparsity, weight_decay=0.003, batchsize=256, 54706 params)
-
-![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac.png?raw=true)
-
-| Model  | Parameter | Accuracy |
-| ------------- | ------------- | ------------- |
-| cpresnet_asc_small  | 59000  | 0.4966  |
-| cpresnet_asc_big  | 131316  | 0.5026  |
-| **asc_prune_35_wd_bs64**  | **54706**  | **0.505**  |
-| asc_prune_35_wd_bs  | 54706  | 0.4975  |
-| asc_prune_35  | 54706  | 0.4866  |
-
-### Other pruners
-When using the other available pruners like BatchNormScalePruner(_bn) and GroupNormPruner (_gn) the results vary marginally, but BatchNormScalePruner seems to perform best all of three pruner types.
-What is more interesting is that you do not need to train the CPResnet before pruning. You just have to prune first your "empty" network, and after that (or during if you use more iteration steps for pruning) you train the network. The results seem even to be better without using a pre-trained CPResnet (=loading the model from checkpoint). In the diagram below the _fromscratch models are the ones with pruning before training (so far only Magnitude Pruner (**asc_prune_35_wd_bs64_fromscratch**) and BatchNormScalePruner (**asc_prune_35_wd_bs64_fromscratch_bn**) was used from scratch).
-![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mac3.png?raw=true)
-
-
-**_Prune and fine-tune big model from scratch_**
-```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="asc_prune_35_wd_bs64_fromscratch_bn" --channel_width='32 64 128' --prune=1 --mnist=0 --n_epochs=50 --pruner='bn' --from_scratch=1
-```
-
-| Model  | Parameter | Accuracy |
-| ------------- | ------------- | ------------- |
-| **asc_prune_35_wd_bs64_fromscratch**  | **54706**  | **0.5353**  |
-| asc_prune_35_wd_bs64_fromscratch_bn  | 54706  | 0.5275  |
-
-In general one can say pruning does already meaningful optimization of the network without significant loss of performance, so fine-tuning might not be completely necessary.
-
-Experiments:
-
-pruning before and then training (from scratch models) lead to same results as pre-trained model and pruning after it (incl. fine-tuning)
-
-checked with epochs = 100, no improvement
-
-checked with different LR scheduler: ReduceLROnPlateau: 
-
-
-## Results
-
-# Experiments
-not from scratch (pruning after training model)
-from scratch (pruning before training model)
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="asc_prune_35_wd_lr_fromscratch_bn_redLRonPlat_3" --channel_width='32 64 128' --prune=1 --mnist=0 --n_epochs=100 --pruner='bn' --from_scratch=1
-
-
-## Workflow
-
-At first, the pipeline is set up with a minimal example, in this case the MNIST dataset is used.
-
-1. (small = original) CP Resnet (Receptive Field Regularization-CNN) is trained on **MNIST** data (0-9 digits) 
-
-2. Then the model complexity is increased by increasing the width of the channels, and again it is trained on the MNIST dataset.
-
-3. Then this model is structure-pruned to get same complexity as the model in 1.), specifically the **Magnitude Pruner** is used. The target pruning size should be equal or less than the small CP Resnet model. This pruned model is then fine-tuned to achieve at least better accuracy than 1.)
-
-4. The whole steps are repeated for **ASC** dataset.
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## reproduce workflow for MNIST:
