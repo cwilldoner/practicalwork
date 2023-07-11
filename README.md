@@ -84,7 +84,7 @@ Now, the CPResnet big is pruned by different pruner methods supported by the Tor
 In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
-| **parameters**  | **44000**  |
+| **parameters**  | **44800**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
@@ -96,16 +96,15 @@ In this step, one has to use the **inference.py** script instead of the ex_dcase
 | pruned | 1 |
 | channel sparsity | 0.41 |
 | learning rate scheduler | lambdaLR |
-| pruner method | bn |
-| iterative steps | 5 |
 
-The parameter channel sparsity is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** to be comparable. Thus the parameter resulted in to remove 41% of the channels of the whole network. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it.
+The parameter **channel sparsity** is important to regulate the number of parameters. We want to have approximately the same as **CPResnet original** (47028) to be comparable. Thus the parameter resulted in to remove 41% of the channels of the whole network. This resulted in 44800 parameters, thus slightly less than the original. This parameter is set once in the code, so it is not necessary to make a hyperparameter of it. The pre-trained CPResnet big is stored under the trained_models folder and the .ckpt file with the best validation loss should be loaded.
 
 To start pruning type
 ```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='bn' --prune=1 --iterative_steps=5 --mnist=0
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --prune=1 --mnist=0
 ```
 
+Default the Magnitude Pruner (mag) is used, but you with parameter ```--pruner``` you can define bn (Batch Normalization Scale Pruner) and gn (GroupNorm Pruner). With parameter ```--iterative_steps``` you can also define in how many steps the pruning process should happen to reach the 41% sparsity, but by default 1 worked the best.
 
 HERE A DIAGRAM OF A WANDB RESULT
 
@@ -122,7 +121,7 @@ This experiment is also executed three times and the average of the accuracy and
 It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
 | model  | CPResnet pruned from scratch | 
 | ------------- | ------------- |
-| **parameters**  | **_____**  |
+| **parameters after pruning**  | **44800**  |
 | batch size  | 256  |
 | channels_multiplier | 2 |
 | base channels  | 32  |
