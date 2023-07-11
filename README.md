@@ -119,7 +119,7 @@ This experiment is also executed three times and the average of the accuracy and
 
 
 ## Pruning an empty network (from scratch)
-It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
+It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
 | model  | CPResnet pruned from scratch | 
 | ------------- | ------------- |
 | **parameters**  | **_____**  |
