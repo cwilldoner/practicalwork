@@ -138,6 +138,13 @@ To start pruning type
 python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_pretrained_mag_redLR_1" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --scheduler="reduceLR" --n_epochs=150
 ```
 
+
+
+RESULTS FROM PRUNING PRE-TRAINED AND USING PLATEAU SCHEDULER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
 ### Pruning an empty network (from scratch)
 In a last experiment, it was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
 | model  | CPResnet pruned from scratch | 
