@@ -80,7 +80,7 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 -
 This is an intermediate result for the whole pruning experiment, thus there is no need to average the results from multiple runs, since we can only take one model to proceed. 
 
 ## Prune CPResnet big
-Now, the CPResnet big is pruned by the different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
+Now, the CPResnet big is pruned by different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
 In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
@@ -152,8 +152,8 @@ This experiment is also executed three times and the average of the accuracy and
 
 
 
-
-
+## Experiments
+Experiments were conducted with different types of learning rate scheduler, training from scratch or not, different starting rates for learning rate and weight decay, number of epochs, types of pruners. It was difficult 
 
 
 
