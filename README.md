@@ -19,7 +19,19 @@ Since there was an example for the Magnitude Pruner in their tutorial i used thi
 #### Magnitude Pruner
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance lost in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer. The paper of the Magnitude Pruner can be found here: [5]
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
-#### Magnitude Pruner
+The procedure of pruning m filters from the ith convolutional layer is as follows:
+1. For each filter Fi,j , calculate the sum of its absolute kernel weights sj =
+Pni
+l=1
+P|Kl
+|.
+2. Sort the filters by sj .
+3. Prune m filters with the smallest sum values and their corresponding feature maps. The
+kernels in the next convolutional layer corresponding to the pruned feature maps are also
+removed.
+4. A new kernel matrix is created for both the ith and i + 1th layers, and the remaining kernel
+weights are copied to the new model.
+#### BatchNormalizationScale Pruner
 The BatchNormalizationScale Pruner ...
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
@@ -59,7 +71,7 @@ This is the baseline. This experiment is executed three times and the average of
 | average accuracy  | 0.50553  |
 | average loss  | 1.38185  |
 
-## Increase size of CPResnet original and train it
+## Increase size of CPResnet original
 Now, the size of the CPResnet original network is increased to get a bigger model, which can be pruned, to show the difference of the original to a pruned version.
 The size is increased by setting the parameter **channel multiplier** to 2. This increases the parameters from 47028 parameters to 131316 parameters.
 This new big model, in the following called **CPResnet big**, is trained with the same hyperparameters, except for the channel multiplier of course.
@@ -88,11 +100,10 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 -
 
 This is an intermediate result for the whole pruning experiment, thus there is no need to average the results from multiple runs, since we can only take one model to proceed. 
 
-## Experiments
-Experiments were conducted with different types of learning rate scheduler, training from scratch or not, different starting rates for learning rate and weight decay, number of epochs, types of pruners. It was difficult 
-
+## Experiments with pruning
+Experiments were conducted with different types of learning rate scheduler, training from scratch or not, different starting rates for learning rate and weight decay, number of epochs, types of pruners.
 ### Prune CPResnet big
-Now, the CPResnet big is pruned by different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
+In a first step, the pre-trained CPResnet big is pruned by different pruner methods supported by the Torch Pruner framework. The pruners work the same in the way, that a pre-trained model is loaded and in customized number of iterations the network is pruned, and in the same time fine-tuned.
 In this step, one has to use the **inference.py** script instead of the ex_dcase.py script. Here the hyperparameters stand for the fine-tuning, not for the training from scratch (further details on this in the next sections). The most important paramters are listed in the table below: 
 | model  | CPResnet pruned | 
 | ------------- | ------------- |
@@ -116,21 +127,21 @@ To start pruning type
 python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --prune=1 --mnist=0
 ```
 
-Default the Magnitude Pruner (mag) is used, but you with parameter ```--pruner``` you can define bn (Batch Normalization Scale Pruner) and gn (GroupNorm Pruner). With parameter ```--iterative_steps``` you can also define in how many steps the pruning process should happen to reach the 41% sparsity, but by default 1 worked the best.
+By default, the Magnitude Pruner (mag) is used, but with parameter ```--pruner``` you can define bn (Batch Normalization Scale Pruner) and gn (GroupNorm Pruner). With parameter ```--iterative_steps``` you can also define in how many steps the pruning process should happen to reach the 41% sparsity, but by default 1 worked the best.
 
-HERE A DIAGRAM OF A WANDB RESULT
+The results seemed not too bad, but with the chosen parameters it seemed the results will not get better. It was trained with 50 epochs and 80 epochs and it seemed it was stuck with the learning rate scheduler.
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/pretrained_results.png?raw=true)
+So in a next experiment a different learning rate scheduler was used. With the different learning rate schedulers from PyTorch [How to adjust learning rate](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) one might achieve better results. I experimented with the ReduceLROnPlateau scheduler which decreases learning rate when a metric is stuck improving for a defined number of epochs.
 
+When using this scheduler it might be important to use more epochs.
 
-This experiment is also executed three times and the average of the accuracy and loss for those experiments is taken and shown in the next table below:
-| model  | CPResnet pruned | 
-| ------------- | ------------- |
-| average accuracy  | 0.500  |
-| average loss  | 1.400  |
-
-
+To start pruning type
+```
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_pretrained_mag_redLR_1" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --scheduler="reduceLR" --n_epochs=150
+```
 
 ### Pruning an empty network (from scratch)
-It was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
+In a last experiment, it was found that it need not to be a pre-trained model to be loaded for the pruners. One can take an untrained **CPResnet big** i.e. just initialize the network module with the untrained class SimpleDCASELitModule ```pl_module = SimpleDCASELitModule(config)```, and feed it into the pruner. The fine-tuning process now is the actual training process, but it happens during the pruning iterations. 
 | model  | CPResnet pruned from scratch | 
 | ------------- | ------------- |
 | **parameters after pruning**  | **44784**  |
@@ -152,7 +163,7 @@ To start training and pruning from an empty network type
 python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_fs_4_mag_LRplat" --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --n_epochs=150 --from_scratch=1 --scheduler="reduceLR"
 ```
 
-With the different learning rate schedulers from PyTorch [How to adjust learning rate](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) one might achieve better results. I experimented with the ReduceLROnPlateau scheduler which decreases learning rate when a metric is stuck improving for a defined number of epochs.
+
 
 Overall results for the best experiment is shown in the picture below:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/best_results.png?raw=true)
