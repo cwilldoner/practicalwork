@@ -20,17 +20,18 @@ Since there was an example for the Magnitude Pruner in their tutorial, i used th
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer. The paper of the Magnitude Pruner can be found here:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
-The procedure of pruning $m$ filters from the $i$th convolutional layer is as follows:
-1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $s_j = \sum_{l=1}^n_i \sum |\Kappa_l|$
-2. Sort the filters by $s_j$
-3. Prune $m$ filters with the smallest sum values and their corresponding feature maps. The
+The procedure of pruning $m$ filters from the $`i`$th convolutional layer is as follows:
+1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum_{l=1}^n_i \sum |\Kappa_l|`$
+2. Sort the filters by $`s_j`$
+3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps. The
 kernels in the next convolutional layer corresponding to the pruned feature maps are also
 removed.
-4. A new kernel matrix is created for both the $i$th and $i$ + 1th layers, and the remaining kernel
+4. A new kernel matrix is created for both the $`i`$th and $`i`$ + 1th layers, and the remaining kernel
 weights are copied to the new model.
 #### BatchNormalizationScale Pruner ([7])
-The BatchNormalizationScale Pruner focuses on the scaling factor $\gamma$ from a Batch Normalization layer. This parameter scales the output distribution of each channel.
+The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer. This parameter scales the output distribution of each channel.
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
+
 
 ## Baseline
 Since the aim of this practical work is to show the results for the ASC dataset, it is shown first. For the interested reader the commands for the MNIST pipeline is shown at the bottom of this page.
