@@ -21,7 +21,7 @@ The Magnitude Pruner removes weights with small magnitude in the network, result
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer is as follows:
-1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum_{l=1}^{n_i} \sum |\kappa_l|`$
+1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum^{n_i} \sum |\kappa_l|`$
 2. Sort the filters by $`s_j`$
 3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps. The
 kernels in the next convolutional layer corresponding to the pruned feature maps are also
