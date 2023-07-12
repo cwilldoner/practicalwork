@@ -28,8 +28,8 @@ kernels in the next convolutional layer corresponding to the pruned feature maps
 removed.
 4. A new kernel matrix is created for both the $i$th and $i$ + 1th layers, and the remaining kernel
 weights are copied to the new model.
-#### BatchNormalizationScale Pruner
-The BatchNormalizationScale Pruner ...
+#### BatchNormalizationScale Pruner ([7])
+The BatchNormalizationScale Pruner focuses on the scaling factor $\gamma$ from a Batch Normalization layer. This parameter scales the output distribution of each channel.
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
 ## Baseline
@@ -240,3 +240,6 @@ https://api.wandb.ai/links/dcase2023/f98vr3de
 
 [6] F. Schmid, S. Masoudian, K. Koutini, G. Widmer (2022). CP-JKU SUBMISSION TO DCASE22: DISTILLING KNOWLEDGE FOR LOW-COMPLEXITY
 CONVOLUTIONAL NEURAL NETWORKS FROM A PATCHOUT AUDIO TRANSFORMER
+
+[7] Z. Liu1, J. Li, Z. Shen, G. Huang, S. Yan, C. Zhang (2017). Learning Efficient Convolutional Networks through Network Slimming. ICCV 2017
+International Conference on Computer Vision
