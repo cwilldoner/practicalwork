@@ -144,15 +144,15 @@ class Network(nn.Module):
         self.quant = QuantStub()
         self.dequant = DeQuantStub()
 
-        width = list(map(int, config['channel_width'].split(" ")))
+        #width = list(map(int, config['channel_width'].split(" ")))
         #print(width)
         # big model
         #width = [32, 64, 128]
         # small model
         #width = [24, 48, 72]
-        n_channels[0] = width[0]
-        n_channels[1] = width[1]
-        n_channels[2] = width[2]
+        #n_channels[0] = width[0]
+        #n_channels[1] = width[1]
+        #n_channels[2] = width[2]
 
         self.in_c = nn.Sequential(nn.Conv2d(
             input_shape[1],
@@ -306,7 +306,7 @@ class Network(nn.Module):
 #@model_ing.command
 def get_model(rho=4, in_channels=1, arch="cp_resnet", n_classes=10,
               base_channels=32, cut_channels_s2=0, cut_channels_s3=0, channels_multiplier=2, n_blocks=(2, 2, 2),
-              s1_group=1, s2_group=1, s3_group=1, channel_width='24 48 72'):
+              s1_group=1, s2_group=1, s3_group=1):
     """
     @param rho: controls the receptive field of the network ,4 is default , rho>4 increase rf and rho<4 decrease it
     @param in_channels: input channels to the network for the audio its by default 1
@@ -323,8 +323,6 @@ def get_model(rho=4, in_channels=1, arch="cp_resnet", n_classes=10,
     @return: full neural network model based on the specified configs.
     """
     # extra receptive checking
-    if channel_width is None:
-        channel_width = [24, 48, 72]
     extra_kernal_rf = rho - 4
 
     model_config = {
@@ -333,7 +331,6 @@ def get_model(rho=4, in_channels=1, arch="cp_resnet", n_classes=10,
         "cut_channels_s2": cut_channels_s2,
         "cut_channels_s3": cut_channels_s3,
         "channels_multiplier": channels_multiplier,
-        "channel_width": channel_width,
         "input_shape": [
             1,
             in_channels,

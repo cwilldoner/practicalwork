@@ -56,8 +56,7 @@ class SimpleDCASELitModule(pl.LightningModule):
         self.model = get_model(in_channels=config.in_channels,
                                n_classes=config.n_classes,
                                base_channels=config.base_channels,
-                               channels_multiplier=config.channels_multiplier,
-                               channel_width=config.channel_width
+                               channels_multiplier=config.channels_multiplier
                                )
 
 
@@ -93,10 +92,14 @@ class SimpleDCASELitModule(pl.LightningModule):
         schedule_lambda = \
             exp_warmup_linear_down(self.config.warm_up_len, self.config.ramp_down_len, self.config.ramp_down_start,
                                    self.config.last_lr_value)
-        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
+        if self.config.scheduler == "reduceLR":
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+        else:
+            lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
         return {
             'optimizer': optimizer,
-            'lr_scheduler': lr_scheduler
+            'lr_scheduler': lr_scheduler,
+            'monitor': "val_loss"
         }
 
     def training_step(self, train_batch, batch_idx):
@@ -294,6 +297,8 @@ def train(config):
                          callbacks=[lr_monitor, checkpoint_callback],
                          default_root_dir="checkpoints/")
 
+    print("Model parameters:")
+    print(sum(p.numel() for p in pl_module.model.parameters()))
     # start training and validation
     trainer.fit(pl_module, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
@@ -332,7 +337,7 @@ if __name__ == '__main__':
     # adapt the complexity of the neural network
     parser.add_argument('--base_channels', type=int, default=16)
     parser.add_argument('--channels_multiplier', type=int, default=2)
-    parser.add_argument('--channel_width', type=str, default='24 48 72')
+    #parser.add_argument('--channel_width', type=str, default='24 48 72')
 
     # training
     parser.add_argument('--batch_size', type=int, default=32)
@@ -340,6 +345,7 @@ if __name__ == '__main__':
     parser.add_argument('--finetune_epochs', type=int, default=30)
     parser.add_argument('--mixup_alpha', type=float, default=0.3)
     parser.add_argument('--weight_decay', type=float, default=0.0001)
+    parser.add_argument('--scheduler', type=str, default="")
     # learning rate + schedule
     # phases:
     #  1. exponentially increasing warmup phase (for 'warm_up_len' epochs)

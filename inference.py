@@ -54,21 +54,27 @@ def do_inference(config):
     """
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    # python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_pretrained_mag_redLR_1" --modelpath=trained_models/cpresnet_asc_big_unpruned_epoch=49-val_loss=1.39.ckpt --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --scheduler="reduceLR" --n_epochs=150
+
     # load model
     #if config.mnist == 1:
     #    pl_module = SimpleDCASELitModule(config)
     #    pl_module.model = torch.load(config.modelpath)
     #else:
     if config.prune == 1 and config.from_scratch == 0:
-        pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path=config.modelpath)
+        #pl_module = SimpleDCASELitModule.load_from_checkpoint(checkpoint_path=config.modelpath)
+        pl_module = SimpleDCASELitModule(config)
+        pl_module.model = torch.load(config.modelpath)
+
     elif config.prune == 0 and config.from_scratch == 0:
         pl_module = SimpleDCASELitModule(config)
         pl_module.model = torch.load(config.modelpath)
     elif config.prune == 1 and config.from_scratch == 1:
         pl_module = SimpleDCASELitModule(config)
+        pl_module.model = []
 
     # disable randomness, dropout, etc...
-    pl_module.model.eval()
+    #pl_module.model.eval()
     pl_module.model.to(device)
 
 
@@ -278,11 +284,17 @@ def do_inference(config):
 
 def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls, train_dl, val_dl, test_dl, trainer):
 
-    num_epochs = 20
+    num_epochs = config.finetune_epochs
     pl_module.model.train()
     # 0. importance criterion for parameter selections
-    imp = tp.importance.MagnitudeImportance(p=2, group_reduction='mean')
+    if config.pruner == "mag":
+        imp = tp.importance.MagnitudeImportance(p=1, group_reduction='mean')
+    elif config.pruner == "bn":
+        imp = tp.importance.BNScaleImportance(group_reduction='mean', normalizer='mean')
+    elif config.pruner == "gn":
+        imp = tp.importance.GroupNormImportance(p=2, normalizer='max')
 
+    ch_sparsity = 0.41
     # 1. ignore some layers that should not be pruned, e.g., the final classifier layer.
     ignored_layers = []
     for m in pl_module.model.modules():
@@ -290,7 +302,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             ignored_layers.append(m)  # DO NOT prune the final classifier!
 
     # 2. Pruner initialization
-    iterative_steps = 6  # You can prune your model to the target sparsity iteratively.
+    iterative_steps = config.iterative_steps  # You can prune your model to the target sparsity iteratively.
     if config.pruner == "mag":
         pruner = tp.pruner.MagnitudePruner(
             pl_module.model.to(device),
@@ -298,7 +310,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
             importance=imp,  # importance criterion for parameter selection
             iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-            ch_sparsity=0.35,  # remove 35% channels
+            ch_sparsity=ch_sparsity,  # remove 41% channels
             ignored_layers=ignored_layers,
         )
     elif config.pruner == "bn":
@@ -308,7 +320,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
             importance=imp,  # importance criterion for parameter selection
             iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-            ch_sparsity=0.3,  # remove 30% channels
+            ch_sparsity=ch_sparsity,  # remove 41% channels
             ignored_layers=ignored_layers,
         )
     elif config.pruner == "gn":
@@ -318,11 +330,19 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
             global_pruning=False,  # If False, a uniform sparsity will be assigned to different layers.
             importance=imp,  # importance criterion for parameter selection
             iterative_steps=iterative_steps,  # the number of iterations to achieve target sparsity
-            ch_sparsity=0.35,  # remove 35% channels
+            ch_sparsity=ch_sparsity,  # remove 41% channels
             ignored_layers=ignored_layers,
         )
 
     base_macs, base_nparams = tp.utils.count_ops_and_params(pl_module.model.to(device), example_inputs)
+    optimizer = torch.optim.Adam(pl_module.model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+    schedule_lambda = \
+        exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
+                               config.last_lr_value)
+    if config.scheduler == "reduceLR":
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+    else:
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
     for i in range(iterative_steps):
         # 3. the pruner.step will remove some channels from the model with least importance
         pruner.step()
@@ -342,11 +362,7 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
         # finetune your model here
         # finetune(model)
         # ...
-        optimizer = torch.optim.Adam(pl_module.model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
-        schedule_lambda = \
-            exp_warmup_linear_down(config.warm_up_len, config.ramp_down_len, config.ramp_down_start,
-                                   config.last_lr_value)
-        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule_lambda)
+
         # Train the model
         total_step = len(train_dl)
 
@@ -370,24 +386,6 @@ def prune_highlevel(device, config, pl_module, model, example_inputs, imgs, lbls
                         print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
                                                                                  loss.mean()))
         else:
-            #for epoch in range(num_epochs):
-            #    for i, (images, labels) in enumerate(train_dl):
-            #        images = images.to(device)
-            #        labels = labels.to(device)
-            #        output = model(images)
-                    #print(labels.shape)
-                    #print(output.shape)
-            #        loss = F.cross_entropy(output, labels, reduction="none")
-                    #print(loss)
-                    # clear gradients for this training step
-            #        optimizer.zero_grad()
-                    # backpropagation, compute gradients
-            #        loss.mean().backward()
-                    # apply gradients
-            #        optimizer.step()
-            #        if (i + 1) % 100 == 0:
-            #            print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
-            #                                                                     loss.mean()))
             trainer.fit(pl_module, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
     print("Pruned model parameters:")
@@ -433,7 +431,8 @@ if __name__ == '__main__':
     parser.add_argument('--architecture', type=str, default="mobilenet")
     parser.add_argument('--modelpath', type=str, default="trained_models")
     parser.add_argument('--cuda', type=int, default=1)
-    parser.add_argument('--channel_width', type=str, default='24, 48, 72')
+    parser.add_argument('--iterative_steps', type=int, default=1)
+    parser.add_argument('--finetune_epochs', type=int, default=20)
 
     # dataset
     # location to store resample waveform
@@ -450,7 +449,7 @@ if __name__ == '__main__':
     parser.add_argument('--channels_multiplier', type=int, default=2)
 
     # training
-    parser.add_argument('--n_epochs', type=int, default=30)
+    parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--pretrained_name', type=str, default=None)
     parser.add_argument('--model_width', type=float, default=1.0)
     parser.add_argument('--head_type', type=str, default="mlp")
@@ -461,6 +460,8 @@ if __name__ == '__main__':
     parser.add_argument('--mixstyle_alpha', type=float, default=0.4)
     parser.add_argument('--no_roll', dest='roll', action='store_false')
     parser.add_argument('--weight_decay', type=float, default=0.0001)
+    parser.add_argument('--scheduler', type=str, default="")
+
     # learning rate + schedule
     # phases:
     #  1. exponentially increasing warmup phase (for 'warm_up_len' epochs)
