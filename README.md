@@ -15,12 +15,13 @@ The more complex way is to remove whole filters from the network, since removing
 The used pruning framework is **Torch Pruning** ([4]) which consists of numerous pruning methods and functions based on PyTorch, but not using the built-in library torch.nn.utils.prune which is "just" using a zero mask. The mentioned framework is all about structured pruning methods and they rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. 
 
 In this work two high-level pruners where mainly experimented with, the **Magnitude Pruner** and the **BatchNormScalePruner**. 
-Since there was an example for the Magnitude Pruner in their tutorial, i used this method first. 
+Since there was an example for the Magnitude Pruner in their tutorial, i used this method first. For all types of pruners, the user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer.
 #### Magnitude Pruner ([5])
-The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer. The paper of the Magnitude Pruner can be found here:
+The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The paper of the Magnitude Pruner can be found here:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
-The procedure of pruning $m$ filters from the $`i`$th convolutional layer is as follows:
+The weights of a filter in each layer are a measure of importance i.e. low weights mean low importance and vice versa. The relative importance is the importance of each filter to the sum of its absolute weights (when using L1 norm) from the whole layer.
+The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
 1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum_{l=1}^{n_i} \sum |\kappa_l|`$
 2. Sort the filters by $`s_j`$
 3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps. The
@@ -28,10 +29,12 @@ kernels in the next convolutional layer corresponding to the pruned feature maps
 removed.
 4. A new kernel matrix is created for both the $`i`$th and $`i`$ + 1th layers, and the remaining kernel
 weights are copied to the new model.
+
 #### BatchNormalizationScale Pruner ([7])
-The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer. This parameter scales the output distribution of each channel.
+The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer (![alt text](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html)). This parameter scales the output distribution of each channel.
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
+In this approach the L1 norm is not applied on the weights, but on the channel-wise batch norm scaling factor.
 
 ## Baseline
 Since the aim of this practical work is to show the results for the ASC dataset, it is shown first. For the interested reader the commands for the MNIST pipeline is shown at the bottom of this page.
