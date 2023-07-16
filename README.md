@@ -180,7 +180,7 @@ This experiment is also executed several times and the average of the accuracy a
 
 
 ## Conclusion
-In several experiments it was shown that structured pruning is a way of minimizing a model size by maintaining the accuracy. However, it is hard to increase the accuracy after pruning, and in this work it was not possible to go beyond the original results. 
+In several experiments it was shown that structured pruning is a way of minimizing a model size by maintaining the accuracy. It was experimented with training with more epochs, different learning rate schedulers, weight decay and learning rate, and different pruner methods (Magnitude and BatchNorm Scale). The fine-tuning after pruning is absolutely necessary to maintain the accuracy, and while good results were achieved with less model parameters than the original CPResnet, all experiments differed slightly, and it was hard to increase the accuracy after pruning, in this work it was not possible to make a huge step to go beyond the original results.
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## Appendix: Workflow for MNIST
