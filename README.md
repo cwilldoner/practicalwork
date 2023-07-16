@@ -36,10 +36,8 @@ The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from
 
 In this approach the L1 norm is not applied on the weights, but on the channel-wise batch norm scaling factor.
 
-## Baseline
-Since the aim of this practical work is to show the results for the ASC dataset, it is shown first. For the interested reader the commands for the MNIST pipeline is shown at the bottom of this page.
-
-In the MALACH23 course, the **CPReset original** network was configured to have 47028 parameters to achieve satisfying results. This is defined as the upper limit for the **CPResnet pruned** network.
+## Baseline CPResnet original
+In the MALACH23 course, the **CPResnet original** network was configured to have 47028 parameters to achieve satisfying results. This number of parameters is the upper limit for the **CPResnet pruned** network.
 To train the CPResnet original, several hyperparameters where found in the preceding course MALACH23. The most important used hyperparams for training are listed in the table below:
 | model  | CPResnet original | 
 | ------------- | ------------- |
@@ -132,18 +130,17 @@ The results seemed not too bad, but with the chosen parameters it seemed the res
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/pretrained_results.png?raw=true)
 So in a next experiment a different learning rate scheduler was used. With the different learning rate schedulers from PyTorch [How to adjust learning rate](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) one might achieve better results. I experimented with the ReduceLROnPlateau scheduler which decreases learning rate when a metric is stuck improving for a defined number of epochs.
 
-When using this scheduler it might be important to use more epochs.
+REMARK:
 
-To start pruning type
+You need to load the model as .pth (not as .ckpt) when changing the learning rate scheduler. The .pth lies in the same folder as the .ckpt file.
+
+To start pruning type with ReduceLROnPlateau scheduler type
 ```
-python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_pretrained_mag_redLR_1" --modelpath=trained_models/cpresnet_asc_big_epoch=XX-val_loss=X.XX.ckpt --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --scheduler="reduceLR" --n_epochs=150
+python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --lr=0.0001 --experiment_name="cpresnet_asc_pruned_pretrained_mag_redLR_1" --modelpath=trained_models/cpresnet_asc_big.pth --pruner='mag' --prune=1 --mnist=0 --iterative_steps=1 --scheduler="reduceLR" --n_epochs=80
 ```
 
-
-
-RESULTS FROM PRUNING PRE-TRAINED AND USING PLATEAU SCHEDULER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
+Result for the best fine-tuned experiment is shown in the picture below:
+![alt text](https://github.com/cwilldoner/practicalwork/blob/main/pretrained_l1.png?raw=true)
 
 
 ### Pruning an empty network (from scratch)
@@ -171,7 +168,7 @@ python inference.py --batch_size=256 --base_channels=32 --weight_decay=0.0001 --
 
 
 
-Overall results for the best experiment is shown in the picture below:
+Result for the best from-scratch experiment is shown in the picture below:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/best_results.png?raw=true)
 
 
@@ -182,28 +179,27 @@ This experiment is also executed several times and the average of the accuracy a
 | average loss  | 1.383  |
 
 
+## Conclusion
+In several experiments it was shown that structured pruning is a way of minimizing a model size by maintaining the accuracy. However, it is hard to increase the accuracy after pruning, and in this work it was not possible to go beyond the original results. 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
-## reproduce workflow for MNIST:
+## Appendix: Workflow for MNIST
 
-**_1. Train (small = original) CP Resnet (channel_width='24 48 72') on MNIST:_**
+**_1. Train (small = original) CP Resnet on MNIST:_**
 
 ```
 python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_small" --mnist=1
 ```
-This model has 59804 params
 
 **wandb Results:**
 
 https://api.wandb.ai/links/dcase2023/sxurf83w
 
-**_2. Train bigger model (and rename experiment_name):_**
+**_2. Train bigger model:_**
 
 ```
-python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channel_width='32 64 128'
+python ex_dcase.py --batch_size=256 --base_channels=32 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_mnist_big" --mnist=1 --channels_multiplier=2
 ```
-
-This model 131316 params
 
 **wandb Results:**
 
@@ -212,17 +208,17 @@ https://api.wandb.ai/links/dcase2023/spadhdku
 **_3. Prune and fine-tune big model_**
 
 ```
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channel_width='32 64 128' --prune=1 --mnist=1
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/cpresnet_mnist_big_epoch=42-val_loss=0.04.ckpt --channels_multiplier=2 --prune=1 --mnist=1
 ```
 
-**Pruned model parameters (with 40% channel sparsity): 47349**
+**Pruned model parameters (with 41% channel sparsity):**
 
 Fine-tuned iteratively on each prune stage
 
 Run test on pruned model:
 
 ```
-python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/pruned_mnist_prune.pth --channel_width='32 64 128' --prune=0 --mnist=1
+python inference.py --batch_size=256 --base_channels=128 --weight_decay=0.003 --lr=0.001 --experiment_name="mnist_prune" --modelpath=trained_models/pruned_mnist_prune.pth --channels_multiplier=2 --prune=0 --mnist=1
 ```
 
 **wandb Results:**
@@ -242,8 +238,8 @@ https://api.wandb.ai/links/dcase2023/f98vr3de
 
 [5] H. Li, A. Kadav, Ig. Durdanovic, H. Samet, H. P. Graf (2017). Pruning Filters for Efficient ConvNets. ICLR 2017 5th International Conference on Learning Representations
 
-[6] F. Schmid, S. Masoudian, K. Koutini, G. Widmer (2022). CP-JKU SUBMISSION TO DCASE22: DISTILLING KNOWLEDGE FOR LOW-COMPLEXITY
-CONVOLUTIONAL NEURAL NETWORKS FROM A PATCHOUT AUDIO TRANSFORMER
+[6] F. Schmid, S. Masoudian, K. Koutini, G. Widmer (2022). CP-JKU Submission to DCASE22: Distilling Knowledge for Low-Complexity
+Convolutional Neural Networks from a Patchout Audio Transformer
 
 [7] Z. Liu1, J. Li, Z. Shen, G. Huang, S. Yan, C. Zhang (2017). Learning Efficient Convolutional Networks through Network Slimming. ICCV 2017
 International Conference on Computer Vision
