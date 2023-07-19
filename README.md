@@ -1,9 +1,9 @@
 # Practical Work in AI Master
 This is a repository for the practical work in AI Master in SS2023 at the JKU University for the Institute for Computational Perception. The code is fully based on PyTorch. The course is a continuation of the MALACH23 course from the Institute for Computational Perception.
 
-A CNN for multi-class classification is trained, first on MNIST ([1]) dataset to set up the pipeline. After that, the actual aim is to train the network on ASC ([2]) dataset and prune it by structured pruning technique. The MNIST dataset is chosen because you do not need any pre-processing steps of the input images and it has 10 classes, like the ASC dataset. 
+A CNN for multi-class classification is trained, first on MNIST [1] dataset to set up the pipeline. After that, the actual aim is to train the network on ASC [2] dataset and prune it by structured pruning technique. The MNIST dataset is chosen because you do not need any pre-processing steps of the input images and it has 10 classes, like the ASC dataset. 
 
-The used CNN network is a Receptive Field Regularization CNN ([6]), originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
+The used CNN network is a Receptive Field Regularization CNN [6], originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
 
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [3]
@@ -12,11 +12,11 @@ The most straight-forward technique is unstructured pruning where weights are si
 ### Structured pruning
 The more complex way is to remove whole filters from the network, since removing a filter results in removing the feature map it outputs too and the consecutive kernels from the consecutive layer. [3]
 
-The used pruning framework is **Torch Pruning** ([4]) which consists of numerous pruning methods and functions based on PyTorch, but not using the built-in library torch.nn.utils.prune which is "just" using a zero mask. The mentioned framework is all about structured pruning methods and they rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. 
+The used pruning framework is **Torch Pruning** [4] which consists of numerous pruning methods and functions based on PyTorch, but not using the built-in library torch.nn.utils.prune which is "just" using a zero mask. The mentioned framework is all about structured pruning methods and they rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. 
 
 In this work two high-level pruners where mainly experimented with, the **Magnitude Pruner** and the **BatchNormScalePruner**. 
 Since there was an example for the Magnitude Pruner in their tutorial, i used this method first. For all types of pruners, the user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer.
-#### Magnitude Pruner ([5])
+#### Magnitude Pruner [5]
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The paper of the Magnitude Pruner can be found here:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
@@ -30,7 +30,7 @@ removed.
 4. A new kernel matrix is created for both the $`i`$th and $`i`$ + 1th layers, and the remaining kernel
 weights are copied to the new model.
 
-#### BatchNormalizationScale Pruner ([7])
+#### BatchNormalizationScale Pruner [7]
 The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer ([PyTorch BatchNorm2d](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html)). This parameter scales the output distribution of each channel.
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
@@ -59,11 +59,9 @@ python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=1 -
 
 Training results:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/asc_small.png?raw=true)
-Test results:
-![alt text](https://github.com/cwilldoner/practicalwork/blob/main/asc_small_mac.png?raw=true)
-![alt text](https://github.com/cwilldoner/practicalwork/blob/main/asc_small_testloss.png?raw=true)
+
 This is the baseline. This experiment is executed three times and the average of the test accuracy (mac_acc) and test loss (test_loss) on the test dataset for those experiments is taken and shown in the next table below:
-| model  | CPReset original | 
+| model  | CPResnet original | 
 | ------------- | ------------- |
 | average accuracy  | 0.50553  |
 | average loss  | 1.38185  |
@@ -90,7 +88,7 @@ To start training type
 python ex_dcase.py --batch_size=256 --base_channels=32 --channels_multiplier=2 --weight_decay=0.003 --lr=0.001 --n_epochs=50 --experiment_name="cpresnet_asc_big" --mnist=0
 ```
 
-| model  | CPReset big | 
+| model  | CPResnet big | 
 | ------------- | ------------- |
 | average accuracy  | 0.50623  |
 | average loss  | 1.38185  |
