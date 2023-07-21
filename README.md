@@ -20,7 +20,7 @@ Since there was an example for the Magnitude Pruner in their tutorial, i used th
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The paper of the Magnitude Pruner can be found here:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
-$`\textbf{x}_i`$ is a feature map, consisting of $`n_i`$ feature maps, each of size $`h_i`$ and $`w_i`$. E.g. for the two consecutive layers ```self.conv1 = Conv2d(1,6,(5,5))``` and ```self.conv2 = Conv2d(6,16,(5,5))```, $`n_1=6`$ and $`n_2=16`$. A kernel matrix $`F_i`$ consists of $`n_{i+1}`$ kernel filters, whereas a kernel filter $`F_{i,j}`$ consists of $`n_i`$ kernels of size $`\Kappa \in \mathbb{R}^{k x k}`$. 
+$`\textbf{x}_i`$ is a feature map, consisting of $`n_i`$ feature maps, each of size $`h_i`$ and $`w_i`$. E.g. for the two consecutive layers ```self.conv1 = Conv2d(1,6,(5,5))``` and ```self.conv2 = Conv2d(6,16,(5,5))```, $`n_1=6`$ and $`n_2=16`$. A kernel matrix $`F_i`$ consists of $`n_{i+1}`$ kernel filters e.g. ```16x(5,5)```, whereas a kernel filter $`F_{i,j}`$ consists of $`n_i`$ kernels (e.g. ```6x(5,5)```) of size $`\Kappa \in \mathbb{R}^{k x k}`$. 
 
 The weights of a filter in each layer are a measure of importance i.e. low weights mean low importance and vice versa. The relative importance is the importance of each filter to the sum of its absolute weights (when using L1 norm) from the whole layer.
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
