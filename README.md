@@ -20,6 +20,8 @@ Since there was an example for the Magnitude Pruner in their tutorial, i used th
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The paper of the Magnitude Pruner can be found here:
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/mag_prune1.png?raw=true)
 
+$`\textbf{x}_i`$ is a feature map, consisting of $`n_i`$ feature maps. E.g. for the two consecutive layers ```self.conv1 = Conv2d(1,6,(5,5))``` and ```self.conv2 = Conv2d(6,16,(5,5))```, $`n_1=6`$ and $`n_2=16`$.
+
 The weights of a filter in each layer are a measure of importance i.e. low weights mean low importance and vice versa. The relative importance is the importance of each filter to the sum of its absolute weights (when using L1 norm) from the whole layer.
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
 1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum_{l=1}^{n_i} \sum |\kappa_l|`$
