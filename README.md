@@ -17,7 +17,7 @@ The more complex way is to remove whole filters from the network, since removing
 
 The used pruning framework is **Torch Pruning** [4] which consists of numerous pruning methods and functions based on PyTorch, but not using the built-in library torch.nn.utils.prune which is "just" using a zero mask. The mentioned framework is all about structured pruning methods and they rely on Dependency Graphs. Those graphs are automatically created out of a neural network to group dependent units within a network, which serve as minimal removeable units, avoiding to destroy the overall network architecture and integrity. The framework serves several different high-level pruner methods which means the user does not have to dive into the dependency graph algorithm, but can use it in an more or less easy way. 
 
-In this work two high-level pruners where mainly experimented with, the **Magnitude Pruner** and the **BatchNormScalePruner**. 
+In this work two high-level pruners where mainly experimented with, the **Magnitude Pruner** and the **BatchNormScalePruner**. Both operate on channel-level sparsity.
 Since there was an example for the Magnitude Pruner in their tutorial, i used this method first. For all types of pruners, the user can define which importance to use i.e. which criterion should be used to remove filters from the network, which group reduction method e.g. mean, max, gaussian,... should be used, which norm should be used, the amount of channel sparsity and in how many iterations the channel sparsity should be reached. So those are still numerous parameters to set, where i sticked to the default ones (for pruning on MNIST) except for the channel sparsity and number of iterations (for pruning on ASC). The most important fact is to not prune the final classification layer.
 #### Magnitude Pruner [5]
 The Magnitude Pruner removes weights with small magnitude in the network, resulting in a smaller and faster model without too much performance loss in accuracy. The paper of the Magnitude Pruner can be found here:
@@ -41,7 +41,7 @@ This is done for each layer in the network (except final classification layer).
 The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer ([PyTorch BatchNorm2d](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html)). This parameter scales the output distribution of each channel.
 ![alt text](https://github.com/cwilldoner/practicalwork/blob/main/bn_prune1.png?raw=true)
 
-In this approach the L1 norm is not applied on the weights, but on the channel-wise batch norm scaling factor.
+Each channel of a layer is associated with a scaling factor $`\gamma`$ (which stems from the BN layer). The model is trained with an additional loss term to the normal loss. This term with a balance factor $`\lambda`$ is a penalty term to achieve sparsity. In this case, the penalty term is the L1 norm. Under these conditions aftere training, the scaling factors $`\gamma`$ for each channel are trained and many are near zero. Then, similar to the Magnitude Pruner, a threshold is chosen, e.g. 70% of the channels of each layer are pruned which have lower $`\gamma`$ values than the remaining 30%.
 
 ## Baseline CPResnet original
 In the MALACH23 course, the **CPResnet original** network was configured to have 47028 parameters to achieve satisfying results. This number of parameters is the upper limit for the **CPResnet pruned** network.
