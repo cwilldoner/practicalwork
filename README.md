@@ -24,7 +24,7 @@ $`\textbf{x}_i`$ is a feature map, consisting of $`n_i`$ feature maps, each of s
 
 The weights of a filter in each layer are a measure of importance i.e. low weights mean low importance and vice versa. The relative importance is the importance of each filter to the sum of its absolute weights (when using L1 norm) from the whole layer.
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
-1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum_{l=1}^{n_i} \sum |\kappa_l|`$
+1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum \sum |\kappa_l|`$
 2. Sort the filters by $`s_j`$
 3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps. The
 kernels in the next convolutional layer corresponding to the pruned feature maps are also
