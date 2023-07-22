@@ -26,7 +26,7 @@ The weights of a filter in each layer are a measure of importance i.e. low weigh
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
 1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum \sum |\kappa_l|`$ e.g. for layer 1, i.e. $`i=1`$ and $`i+1=2`$ -> $`n_2=6`$: $`s_1 = (|(5 \times 5)|) = 0.6`$, $`s_2 = (|(5 \times 5)) = 0.1 `$, ..., $`s_6 = (|(5 \times 5)) = -1.3`$
 2. Sort the filters by $`s_j`$, e.g. $`s_2 > s_1 > s_3 > s_4 > s_5 > s_6`$
-3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps, e.g. $`m=4`$, thus $`s_6`$, $`s_5`$, $`s_4`$, $`s_3`$ will be removed. This means the dimension across the $`n+1`$ will be decreased, thus the channel amount will be decreased (e.g. for layer 1 -> $`n=1`$ -> ```self.conv1 = Conv2d(1,2, (5,5))```). The
+3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps, e.g. $`m=4`$, thus $`s_6`$, $`s_5`$, $`s_4`$, $`s_3`$ will be removed. This means the dimension of the kernel matrix across the $`n+1`$ will be decreased, thus the channel amount will be decreased (e.g. for layer 1 -> $`n=1`$ -> ```self.conv1 = Conv2d(1,2, (5,5))```). The
 kernels in the next convolutional layer corresponding to the pruned feature maps are also
 removed, thus the dimension across $`n`$ will be decreased, thus the channel amount will be decreased (e.g. for layer 2 -> $`n+1=2`$ for $`n=1`$ -> ```self.conv2 = Conv2d(2,16,(5,5))```).
 4. A new kernel matrix is created for both the $`i`$th and $`i`$ + 1th layers, and the remaining kernel
