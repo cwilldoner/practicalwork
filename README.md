@@ -5,6 +5,9 @@ A CNN for multi-class classification is trained, first on MNIST [1] dataset to s
 
 The used CNN network is a Receptive Field Regularization CNN [6], originating from the Institute of Computational Perception, afterwards in this documentation it is called CPResnet. Further, it is differentiated between a CPResnet original network and the CPResnet pruned network. The CPResnet original has a defined number of parameters, which has to be underbid by structured pruned version CPResnet pruned. Further, the accuracy and loss of the CPResnet pruned should be better than the CPResnet original network. 
 
+## Approach
+First, a pipeline is set up with the MNIST dataset. After that, the ASC dataset is used to train the CPResnet original network as a baseline. Next, the CPResnet original size is increased. Then this new big model is pruned by structural pruning methods, described in the following chapter. The network is approximately pruned to the size of the CPResnet original network. It is shown that there is no accuracy drop between the original and the pruned network.
+
 ## Pruning
 Pruning is the technique of optimizing the network by its size to decrease computation and parameter storage overhead, without the loss of performance. It belongs to a group of network compression methods like Quantization and Knowledge Distillation. With Pruning, less significant neurons have to be detected and their dependencies across the network has to be measured, to not decrease the performance of the trained model after pruning. In general, pruning can be done before, during and after training. [3]
 ### Unstructured pruning
