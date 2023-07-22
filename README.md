@@ -24,13 +24,15 @@ $`\textbf{x}_i`$ is a feature map, consisting of $`n_i`$ feature maps, each of s
 
 The weights of a filter in each layer are a measure of importance i.e. low weights mean low importance and vice versa. The relative importance is the importance of each filter to the sum of its absolute weights (when using L1 norm) from the whole layer.
 The procedure of pruning $m$ filters from the $`i`$th convolutional layer for L1 norm is as follows:
-1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum \sum |\kappa_l|`$
-2. Sort the filters by $`s_j`$
-3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps. The
+1. For each filter $`F_{i,j}`$ , calculate the sum of its absolute kernel weights $`s_j = \sum \sum |\kappa_l|`$ e.g. for $`n_2=6`$: $`s_1 = (-0.4 + 1.2 + (-0.7) + 0.5) = 0.6`$, $`s_2 = (0.3 + 0.2 + (-0.9) + 0.5) = 0.1 `$, ..., $`s_6 = (-0.5 + (-0.2) + (-0.7) + 0.1) = -1.3`$
+2. Sort the filters by $`s_j`$, e.g. $`s_2 > s_1 > s_3 > s_4 > s_5 > s_6`$
+3. Prune $`m`$ filters with the smallest sum values and their corresponding feature maps, e.g. $`m=4`$, thus $`s_6`$, $`s_5`$, $`s_4`$, $`s_3`$ will be removed. The
 kernels in the next convolutional layer corresponding to the pruned feature maps are also
 removed.
 4. A new kernel matrix is created for both the $`i`$th and $`i`$ + 1th layers, and the remaining kernel
 weights are copied to the new model.
+
+This is done for each layer in the network (except final classification layer).
 
 #### BatchNormalizationScale Pruner [7]
 The BatchNormalizationScale Pruner focuses on the scaling factor $`\gamma`$ from a Batch Normalization layer ([PyTorch BatchNorm2d](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html)). This parameter scales the output distribution of each channel.
